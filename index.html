@@ -1,0 +1,2215 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Alathur NW ERPS</title>
+  <meta name="theme-color" content="#0B0F12">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ERPS Field">
+  <script src="jspdf.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0B0F12;
+      --surface:#12181C;
+      --surface-2:#181F24;
+      --border:#232B30;
+      --text:#E8EDEF;
+      --muted:#7C8A90;
+      --accent:#43D17A;      /* fiber link-up green */
+      --accent-dim:#1E3A2A;
+      --warn:#F0A93B;        /* editable / alarm amber */
+      --warn-dim:#3A2E15;
+      --danger:#E15554;
+      --radius:10px;
+    }
+    *{box-sizing:border-box;}
+    html,body{
+      margin:0; padding:0; background:var(--bg); color:var(--text);
+      font-family:'IBM Plex Sans',sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mono{ font-family:'IBM Plex Mono',monospace; }
+
+    header{
+      position:sticky; top:0; z-index:20;
+      background:var(--bg);
+      border-bottom:1px solid var(--border);
+      padding:calc(14px + env(safe-area-inset-top, 0px)) 16px 10px;
+    }
+    .brand{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; flex-wrap:wrap;}
+    .brand-left{ display:flex; align-items:center; gap:8px; }
+    .brand-dot{ width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent);}
+    .brand-title{ font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600;}
+    .brand-subtitle{ font-size:10px; letter-spacing:.03em; color:var(--muted); opacity:.6; margin-top:1px; }
+    .dash-btn{
+      display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--accent);
+      background:var(--accent-dim); border:1px solid var(--accent); padding:7px 12px; border-radius:8px;
+      cursor:pointer; white-space:nowrap;
+    }
+
+    .selects{ display:flex; flex-direction:column; gap:10px; }
+    select{
+      width:100%; appearance:none; -webkit-appearance:none;
+      background:var(--surface) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' stroke='%237C8A90' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat right 14px center;
+      border:1px solid var(--border); color:var(--text);
+      padding:13px 38px 13px 14px; border-radius:var(--radius);
+      font-size:15px; font-family:'IBM Plex Mono',monospace;
+    }
+    select:disabled{ color:var(--muted); }
+
+    .search-wrap{ position:relative; }
+    #siteSearch{
+      width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text);
+      padding:13px 38px 13px 14px; border-radius:var(--radius);
+      font-size:15px; font-family:'IBM Plex Mono',monospace;
+    }
+    #siteSearch::placeholder{ color:var(--muted); font-family:'IBM Plex Sans',sans-serif; }
+    #siteSearch:focus{ outline:none; border-color:var(--accent); }
+    .search-clear{
+      position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      background:none; border:none; color:var(--muted); font-size:22px; line-height:1; padding:4px 8px;
+    }
+    .search-results{
+      position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:40;
+      background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+      max-height:300px; overflow-y:auto; display:none;
+      box-shadow:0 6px 20px rgba(0,0,0,0.5);
+    }
+    .search-results.show{ display:block; }
+    .search-item{ padding:11px 14px; border-bottom:1px solid var(--border); cursor:pointer; }
+    .search-item:last-child{ border-bottom:none; }
+    .search-item:active{ background:var(--accent-dim); }
+    .search-item .si-name{ font-size:14px; font-weight:600; }
+    .search-item .si-cluster{ font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; margin-top:2px; }
+    .search-item mark{ background:var(--accent-dim); color:var(--accent); padding:0 1px; border-radius:2px; }
+    .search-none{ padding:14px; text-align:center; color:var(--muted); font-size:13px; }
+
+    main{ padding:14px 16px 100px; max-width:640px; margin:0 auto; }
+
+    .empty-state{
+      margin-top:60px; text-align:center; color:var(--muted); padding:0 20px;
+    }
+    .empty-state .glyph{ font-size:34px; margin-bottom:10px; opacity:.6; }
+    .empty-state .glyph .mono{ font-size:18px; }
+
+    .site-card{
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+      padding:14px 16px; margin-bottom:14px;
+    }
+    .site-card .row1{ display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+    .site-name{ font-size:17px; font-weight:600; }
+    .cluster-tag{ font-size:11px; color:var(--accent); font-family:'IBM Plex Mono',monospace; letter-spacing:.03em;}
+    .link-path{ margin-top:8px; font-size:12.5px; color:var(--muted); font-family:'IBM Plex Mono',monospace; line-height:1.6; word-break:break-word;}
+    .link-path b{ color:var(--text); font-weight:500; }
+
+    .diagram-wrap{
+      margin-top:10px; border:1px solid var(--border); border-radius:8px;
+      background:var(--surface-2); padding:8px; display:flex; align-items:center; gap:10px;
+      cursor:pointer;
+    }
+    .diagram-wrap img{ max-height:70px; max-width:90px; border-radius:4px; display:block; }
+    .diagram-hint{ font-size:12px; color:var(--muted); }
+    .diagram-placeholder{ font-size:12px; color:var(--muted); font-family:'IBM Plex Mono',monospace; padding:4px 2px; }
+
+    .status-row{ display:flex; gap:8px; margin-top:10px; }
+    .status-badge{
+      flex:1; border-radius:8px; padding:8px 10px; border:1px solid var(--border);
+      background:var(--surface-2);
+    }
+    .status-badge .status-label{ display:block; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
+    .status-badge .status-value{ display:block; font-size:13px; font-weight:500; word-break:break-word; }
+    .status-badge.badge-done{ border-color:var(--accent); background:var(--accent-dim); }
+    .status-badge.badge-done .status-value{ color:var(--accent); }
+    .status-badge.badge-progress{ border-color:var(--warn); background:var(--warn-dim); }
+    .status-badge.badge-progress .status-value{ color:var(--warn); }
+    .status-badge.badge-pending .status-value{ color:var(--muted); font-style:italic; font-weight:400; }
+    .status-badge.badge-info .status-value{ color:var(--text); font-weight:600; }
+    .status-badge.badge-power{ border-color:var(--danger); background:rgba(225,85,84,0.12); }
+    .status-badge.badge-power .status-value{ color:var(--danger); }
+    .tab.power-tab{ border-color:var(--danger); }
+    .tab.power-tab .led{ background:var(--danger); }
+    .tab.power-tab.active{ background:rgba(225,85,84,0.15); color:var(--danger); }
+
+    .sync-row{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      margin:-4px 0 10px; font-size:11.5px; color:var(--muted);
+    }
+    .sync-row #syncText{ flex:1; min-width:0; }
+    .sync-actions{ display:flex; gap:6px; flex:0 0 auto; }
+    .sync-actions button{
+      background:var(--surface); border:1px solid var(--border); color:var(--text);
+      border-radius:7px; padding:5px 9px; font-size:12px; font-family:inherit; cursor:pointer;
+    }
+    #installBtn{ color:var(--accent); border-color:var(--accent); }
+    .modal-sub.err{ color:var(--danger); }
+    .dash-btn.view-mode{ color:var(--muted); border-color:var(--border); background:var(--surface); }
+    .dash-btn.admin-mode{ color:var(--warn); border-color:var(--warn); background:var(--warn-dim); }
+
+    .modal{
+      position:fixed; inset:0; background:rgba(4,7,9,0.88); z-index:120;
+      display:none; align-items:center; justify-content:center; padding:24px;
+    }
+    .modal.show{ display:flex; }
+    .modal-box{
+      background:var(--surface); border:1px solid var(--border); border-radius:12px;
+      padding:18px; width:100%; max-width:340px;
+    }
+    .modal-title{ font-size:16px; font-weight:700; margin-bottom:4px; }
+    .modal-sub{ font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.5; }
+    .modal-box input{
+      width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+      border-radius:8px; padding:12px; font-size:16px; font-family:'IBM Plex Mono',monospace;
+    }
+    .modal-box input:focus{ outline:none; border-color:var(--accent); }
+    .modal-err{ color:var(--danger); font-size:12px; min-height:16px; margin-top:8px; }
+    .modal-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+    .port-row input[readonly]{ opacity:.9; }
+
+    .lightbox{
+      position:fixed; inset:0; background:rgba(4,7,9,0.92); z-index:100;
+      display:none; align-items:center; justify-content:center; padding:24px;
+    }
+    .lightbox.show{ display:flex; }
+    .lightbox img{ max-width:100%; max-height:100%; border-radius:8px; border:1px solid var(--border); }
+    .lightbox-close{
+      position:absolute; top:18px; right:18px; color:var(--muted); font-size:28px; line-height:1;
+      background:none; border:none;
+    }
+    .lightbox-download{
+      position:absolute; top:20px; left:18px; color:var(--accent); font-size:13.5px; font-weight:600;
+      background:var(--accent-dim); border:1px solid var(--accent); padding:9px 14px; border-radius:8px;
+      text-decoration:none; z-index:101;
+    }
+
+    /* Dashboard overlay */
+    .dashboard{
+      position:fixed; inset:0; background:var(--bg); z-index:60;
+      display:none; flex-direction:column;
+    }
+    .dashboard.show{ display:flex; }
+    .dash-header{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:14px 16px; border-bottom:1px solid var(--border); flex:0 0 auto;
+    }
+    .dash-header h2{ font-size:15px; margin:0; letter-spacing:.03em; }
+    .dash-close{ background:none; border:none; color:var(--muted); font-size:26px; line-height:1; }
+    .dash-body{ flex:1; overflow-y:auto; padding:14px 16px 40px; max-width:640px; margin:0 auto; width:100%; }
+
+    .tiles{ display:flex; gap:8px; margin-bottom:20px; }
+    .tile{
+      flex:1; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+      padding:12px 10px; text-align:center;
+    }
+    .tile .tile-num{ font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; }
+    .tile .tile-label{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+    .tile .tile-bar{ height:4px; border-radius:2px; background:var(--border); margin-top:8px; overflow:hidden; }
+    .tile .tile-bar-fill{ height:100%; background:var(--accent); }
+    .tile .tile-na{ font-size:9.5px; color:var(--muted); margin-top:6px; }
+    .dash-actions{ display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px; }
+
+    .section-title{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:18px 0 8px; font-weight:600;}
+
+    .cluster-row{
+      display:flex; align-items:center; gap:10px; padding:12px 14px; background:var(--surface);
+      border:1px solid var(--border); border-radius:10px; margin-bottom:8px; cursor:pointer;
+    }
+    .cluster-row .c-name{ flex:1; font-size:14px; font-weight:600; }
+    .cluster-row .c-sites{ font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; }
+    .mini-stats{ display:flex; gap:10px; }
+    .mini-stat{ text-align:center; min-width:36px; }
+    .mini-stat .mini-num{ font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; }
+    .mini-stat.done .mini-num{ color:var(--accent); }
+    .mini-stat.partial .mini-num{ color:var(--warn); }
+    .mini-stat .mini-tag{ font-size:9px; color:var(--muted); text-transform:uppercase; }
+    .cluster-row .chev{ color:var(--muted); font-size:16px; }
+
+    .pending-item{
+      background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--warn);
+      border-radius:8px; padding:10px 12px; margin-bottom:8px; cursor:pointer;
+    }
+    .pending-item .p-site{ font-size:13.5px; font-weight:600; }
+    .pending-item .p-cluster{ font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; margin-bottom:6px; }
+    .pending-item .p-flags{ display:flex; gap:6px; flex-wrap:wrap; }
+    .p-flag{
+      font-size:10.5px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); color:var(--muted);
+    }
+    .p-flag.pending{ border-color:var(--warn); color:var(--warn); }
+    .all-clear{ text-align:center; color:var(--accent); font-size:13.5px; padding:20px 0; }
+
+    /* Power Level Cases */
+    .power-case{
+      background:var(--surface); border:1px solid var(--danger); border-left:4px solid var(--danger);
+      border-radius:10px; padding:12px 14px; margin-bottom:10px; cursor:pointer;
+    }
+    .power-case .pc-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .power-case .pc-site{ font-size:14.5px; font-weight:700; }
+    .power-case .pc-cluster{ font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; }
+    .power-case .pc-readings{
+      display:flex; gap:14px; margin-top:8px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text);
+    }
+    .power-case .pc-readings b{ color:var(--muted); font-weight:400; font-family:'IBM Plex Sans',sans-serif; font-size:10.5px; display:block; }
+    .power-case .pc-status{
+      margin-top:8px; display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700;
+    }
+    .power-case .pc-status.resolved{ background:var(--accent-dim); color:var(--accent); }
+    .power-case .pc-status.open{ background:rgba(225,85,84,0.15); color:var(--danger); }
+    .power-summary{ text-align:center; font-size:12px; color:var(--muted); margin-bottom:14px; }
+
+    /* Sink Node Ports */
+    #sinkNodeSelect{ margin-bottom:16px; }
+    .port-row{
+      display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--surface);
+      border:1px solid var(--border); border-radius:10px; margin-bottom:8px;
+    }
+    .port-row input.port-id{
+      width:78px; flex:0 0 auto; background:var(--surface-2); border:1px solid var(--border);
+      color:var(--accent); border-radius:6px; padding:8px 8px; font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:center;
+    }
+    .port-row input.port-conn{
+      flex:1; background:var(--surface-2); border:1px solid var(--border);
+      color:var(--text); border-radius:6px; padding:8px 10px; font-size:14px;
+    }
+    .port-row .del-btn{ color:var(--danger); font-size:20px; line-height:1; background:none; border:none; padding:4px 6px; flex:0 0 auto; }
+    .port-empty{ text-align:center; color:var(--muted); font-size:13px; padding:24px 0; }
+    .port-actions{ display:flex; gap:8px; margin-top:14px; }
+    .btn.add-port{ color:var(--accent); border-color:var(--accent); flex:1; text-align:center; }
+    .btn.save-ports{ background:var(--accent); color:#04120A; border-color:var(--accent); flex:1; text-align:center; }
+
+    /* Checklist cards */
+    .checklist-card{
+      border:1px solid #999; border-radius:6px; overflow:hidden; margin-bottom:16px;
+      break-inside:avoid; page-break-inside:avoid; background:#fff;
+    }
+    .checklist-card-header{
+      background:#1F3B57; color:#fff; padding:8px 12px; font-weight:700; font-size:14px;
+    }
+    .checklist-card-header .cl-cluster{ font-weight:400; font-size:11px; color:#cbd8e6; margin-left:6px; }
+    .checklist-row{ display:flex; border-top:1px solid #ccc; font-size:12.5px; }
+    .checklist-row .cl-label{ flex:0 0 38%; background:#f5f7fa; color:#333; font-weight:600; padding:6px 10px; }
+    .checklist-row .cl-value{ flex:1; color:#111; font-weight:600; padding:6px 10px; background:#fff; }
+    .checklist-checks{
+      display:flex; gap:18px; background:#f2f2f2; padding:10px 12px; border-top:1px solid #ccc;
+      font-size:13px; font-weight:600; color:#111; flex-wrap:wrap;
+    }
+    .checklist-checks span{ display:inline-flex; align-items:center; gap:6px; }
+    .checklist-checks .box{ width:13px; height:13px; border:1.5px solid #333; display:inline-block; }
+    .checklist-page{ break-after:page; page-break-after:always; }
+    .checklist-title{ text-align:center; margin-bottom:20px; }
+    .checklist-title h1{ font-size:20px; color:#1F3B57; margin:0 0 2px; }
+    .checklist-title .sub{ font-size:13px; color:#555; font-weight:600; margin-bottom:2px; }
+    .checklist-title .by{ font-size:11px; color:#888; font-style:italic; }
+
+    /* Status report table */
+    .report-meta{ text-align:center; font-size:11px; color:#666; margin-bottom:16px; }
+    .report-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+    .report-table th{
+      background:#1F3B57; color:#fff; text-align:left; padding:8px 10px; font-size:11.5px;
+      text-transform:uppercase; letter-spacing:.03em;
+    }
+    .report-cluster-row td{
+      background:#dce6f0; font-weight:700; padding:7px 10px; color:#1F3B57; border-top:2px solid #1F3B57;
+    }
+    .report-cluster-row .cluster-extra{
+      float:right; font-weight:600; font-size:11px; color:#3a5f83; text-transform:none; letter-spacing:0;
+    }
+    .report-table td{ padding:6px 10px; border-bottom:1px solid #ddd; color:#111; }
+    .report-pill{
+      display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11px;
+    }
+    .report-pill.done{ background:#d7f2e0; color:#1a7a44; }
+    .report-pill.pending{ background:#fdecc8; color:#8a5a00; }
+    .report-table tr{ break-inside:avoid; page-break-inside:avoid; }
+
+    .paper-preview{
+      background:#fff; border-radius:10px; padding:20px 16px; box-shadow:0 2px 12px rgba(0,0,0,0.4);
+    }
+
+    @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body * { visibility:hidden; }
+      #checklistBody, #checklistBody *, #statusReportBody, #statusReportBody *,
+      #dashBody, #dashBody * { visibility:visible; }
+      #checklistBody, #statusReportBody { position:absolute; top:0; left:0; width:100%; background:#fff; padding:0; }
+      #dashBody { position:absolute; top:0; left:0; width:100%; padding:16px; background:var(--bg); }
+      .no-print, .dash-close { display:none !important; }
+      .dashboard { position:static; background:#fff; }
+      #dashboard { background:var(--bg) !important; }
+      .paper-preview { box-shadow:none; border-radius:0; padding:0; }
+    }
+
+    .tabbar{
+      display:flex; overflow-x:auto; gap:6px; margin-bottom:12px;
+      -ms-overflow-style:none; scrollbar-width:none;
+    }
+    .tabbar::-webkit-scrollbar{ display:none; }
+    .tab{
+      flex:0 0 auto; padding:9px 14px; border-radius:999px; font-size:13px; font-weight:500;
+      background:var(--surface); border:1px solid var(--border); color:var(--muted);
+      white-space:nowrap; cursor:pointer;
+    }
+    .tab.active{ background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+    .tab .led{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; background:var(--border); vertical-align:middle;}
+    .tab.filled .led{ background:var(--accent); }
+    .tab.editable-tab .led{ background:var(--warn); }
+
+    .panel{
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+      padding:6px 4px; margin-bottom:16px;
+    }
+    .field{
+      display:flex; justify-content:space-between; align-items:center; gap:12px;
+      padding:12px 14px; border-bottom:1px solid var(--border);
+    }
+    .field:last-child{ border-bottom:none; }
+    .field-label{ font-size:13px; color:var(--muted); flex:0 0 42%; }
+    .field-value{
+      font-size:14.5px; font-family:'IBM Plex Mono',monospace; text-align:right; flex:1;
+      word-break:break-word; color:var(--text);
+    }
+    .field-value.blank{ color:var(--muted); font-style:italic; font-family:'IBM Plex Sans',sans-serif; font-size:13px;}
+    .field-value input, .field-value select{
+      width:100%; text-align:right; background:var(--surface-2); border:1px solid var(--warn);
+      color:var(--text); border-radius:6px; padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:14.5px;
+    }
+    .field-value input[type="date"]{ text-align:left; color-scheme:dark; }
+
+    .panel-note{
+      font-size:11.5px; color:var(--warn); padding:10px 14px 4px; display:flex; align-items:center; gap:6px;
+    }
+
+    .edit-toggle-bar{ display:flex; justify-content:flex-end; margin:-6px 0 8px; }
+    .btn{
+      font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; font-weight:600;
+      padding:9px 16px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2);
+      color:var(--text); cursor:pointer;
+    }
+    .btn.edit{ color:var(--warn); border-color:var(--warn); }
+    .btn.save{ background:var(--accent); color:#04120A; border-color:var(--accent); }
+    .btn.cancel{ color:var(--muted); }
+    .btn-row{ display:flex; gap:8px; justify-content:flex-end; margin-bottom:16px; }
+
+    .toast{
+      position:fixed; left:16px; right:16px; bottom:20px; z-index:50;
+      background:var(--surface-2); border:1px solid var(--accent); color:var(--accent);
+      padding:13px 16px; border-radius:var(--radius); font-size:13.5px; text-align:center;
+      opacity:0; transform:translateY(10px); transition:all .25s ease; pointer-events:none;
+      max-width:640px; margin:0 auto;
+    }
+    .toast.show{ opacity:1; transform:translateY(0); }
+    .toast.err{ border-color:var(--danger); color:var(--danger); }
+
+    .loading{ text-align:center; color:var(--muted); padding:40px 0; font-size:13px; font-family:'IBM Plex Mono',monospace;}
+    .spinner{
+      width:22px; height:22px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--accent);
+      margin:0 auto 10px; animation:spin .8s linear infinite;
+    }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-left">
+        <span class="brand-dot"></span>
+        <div>
+          <div class="brand-title">Alathur NW ERPS Migration</div>
+          <div class="brand-subtitle">Built by Sarath Ganga S, JE</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <div class="dash-btn" id="statusReportBtn">📋 Status Report</div>
+        <div class="dash-btn" id="checklistBtn">🖨 Checklist</div>
+        <div class="dash-btn" id="sinkPortsBtn">🔌 Sink Ports</div>
+        <div class="dash-btn" id="dashBtn">📊 Dashboard</div>
+        <div class="dash-btn" id="powerCasesBtn" style="border-color:var(--danger); color:var(--danger); background:rgba(225,85,84,0.12);">⚡ Power Levels</div>
+        <div class="dash-btn view-mode" id="adminBtn">🔒 View only</div>
+      </div>
+    </div>
+    <div class="sync-row">
+      <span id="syncText">Starting…</span>
+      <span class="sync-actions">
+        <button id="installBtn" style="display:none;">⬇ Install</button>
+        <button id="diagBtn" title="Download all cluster diagrams again">🖼</button>
+        <button id="syncBtn">⟳ Sync</button>
+      </span>
+    </div>
+    <div class="selects">
+      <div class="search-wrap">
+        <input type="text" id="siteSearch" autocomplete="off" placeholder="🔍 Search site by name…">
+        <button class="search-clear" id="siteSearchClear" style="display:none;">&times;</button>
+        <div class="search-results" id="siteSearchResults"></div>
+      </div>
+      <select id="clusterSelect" autocomplete="off">
+        <option value="">Select cluster no…</option>
+      </select>
+      <select id="siteSelect" autocomplete="off" disabled>
+        <option value="">Select site…</option>
+      </select>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="empty-state" id="emptyState">
+      <div class="glyph mono">░ ░ ░</div>
+      <div>Pick a cluster, then a site,<br>to load its 2G / 3G / 4G / SINK details.</div>
+    </div>
+  </main>
+
+  <div class="modal" id="setupOverlay" style="z-index:200;">
+    <div class="modal-box">
+      <div class="modal-title">Alathur NW ERPS</div>
+      <div class="modal-sub" id="setupMsg">Starting…</div>
+      <div class="modal-actions">
+        <button class="btn save" id="setupBtn" style="display:none;">Try again</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="adminModal">
+    <div class="modal-box">
+      <div class="modal-title">Admin login</div>
+      <div class="modal-sub">Enter the admin PIN to edit data. Without it, the app is view-only.</div>
+      <input type="password" id="adminPinInput" autocomplete="off" placeholder="Admin PIN">
+      <div class="modal-err" id="adminErr"></div>
+      <div class="modal-actions">
+        <div class="btn cancel" id="adminCancelBtn">Cancel</div>
+        <div class="btn save" id="adminLoginBtn">Log in</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">&times;</button>
+    <a class="lightbox-download" id="lightboxDownload" download="cluster-diagram.png">⬇ Download</a>
+    <img id="lightboxImg" src="">
+  </div>
+
+  <div class="dashboard" id="dashboard">
+    <div class="dash-header no-print">
+      <h2>Migration Dashboard</h2>
+      <button class="dash-close" id="dashCloseBtn">&times;</button>
+    </div>
+    <div class="dash-body" id="dashBody">
+      <div class="loading"><div class="spinner"></div>Loading dashboard…</div>
+    </div>
+  </div>
+
+  <div class="dashboard" id="powerCasesPanel">
+    <div class="dash-header">
+      <h2>⚡ Power Level Cases</h2>
+      <button class="dash-close" id="powerCasesCloseBtn">&times;</button>
+    </div>
+    <div class="dash-body" id="powerCasesBody">
+      <div class="loading"><div class="spinner"></div>Loading power cases…</div>
+    </div>
+  </div>
+
+  <div class="dashboard" id="sinkPortsPanel">
+    <div class="dash-header">
+      <h2>Sink Node Ports</h2>
+      <button class="dash-close" id="sinkPortsCloseBtn">&times;</button>
+    </div>
+    <div class="dash-body" id="sinkPortsBody">
+      <select id="sinkNodeSelect" autocomplete="off">
+        <option value="">Select sink node…</option>
+      </select>
+      <div id="portsListWrap"></div>
+    </div>
+  </div>
+
+  <div class="dashboard" id="statusReportPanel">
+    <div class="dash-header no-print">
+      <h2>Status Report</h2>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="btn save-ports" id="printStatusReportBtn" style="padding:8px 14px;">🖨 Print / Save PDF</div>
+        <button class="dash-close" id="statusReportCloseBtn">&times;</button>
+      </div>
+    </div>
+    <div class="dash-body" id="statusReportBody">
+      <div class="loading"><div class="spinner"></div>Loading status report…</div>
+    </div>
+  </div>
+
+  <div class="dashboard" id="checklistPanel">
+    <div class="dash-header no-print">
+      <h2>Field Verification Checklist</h2>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="btn save-ports" id="printChecklistBtn" style="padding:8px 14px;">🖨 Print / Save PDF</div>
+        <button class="dash-close" id="checklistCloseBtn">&times;</button>
+      </div>
+    </div>
+    <div class="dash-body" id="checklistBody">
+      <div class="loading"><div class="spinner"></div>Loading checklist…</div>
+    </div>
+  </div>
+
+  <script>
+/* =====================================================================
+   OFFLINE LAYER
+   Replaces google.script.run so the app below can stay exactly as it was.
+   - Reading: always from the copy of the data saved on this phone (instant, works offline).
+   - Syncing: when online, the copy is refreshed from the Google Sheet.
+   - Saving (admin only): needs internet; goes to the Sheet through the web app.
+   ===================================================================== */
+(function () {
+  'use strict';
+
+  // ====== CONNECTION SETTING ======================================
+  // Paste the "Web app" URL of the deployment that has access set to
+  // "Anyone". It ends with /exec.
+  var API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+  // =================================================================
+
+  var SYNC_KEY = 'erpsLastSync';
+
+  // ---------- helpers ----------
+  var ls = {
+    get: function (k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} },
+    remove: function (k) { try { window.localStorage.removeItem(k); } catch (e) {} }
+  };
+  function $(id) { return document.getElementById(id); }
+  function clone(x) { return x === undefined ? undefined : JSON.parse(JSON.stringify(x)); }
+  function isOnline() { return navigator.onLine !== false; }
+  function toast(msg, isErr) { if (typeof window.showToast === 'function') window.showToast(msg, isErr); }
+
+  // ---------- saved data (IndexedDB, with a memory fallback) ----------
+  var memStore = { kv: {}, diagrams: {} };
+  var dbPromise = null;
+
+  function openDb() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve) {
+      try {
+        if (!window.indexedDB) { resolve(null); return; }
+        var req = window.indexedDB.open('erps-offline', 1);
+        req.onupgradeneeded = function () {
+          var db = req.result;
+          if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+          if (!db.objectStoreNames.contains('diagrams')) db.createObjectStore('diagrams');
+        };
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = function () { resolve(null); };
+        req.onblocked = function () { resolve(null); };
+      } catch (e) { resolve(null); }
+    });
+    return dbPromise;
+  }
+
+  function idbGet(store, key) {
+    return openDb().then(function (db) {
+      if (!db) return memStore[store][key];
+      return new Promise(function (resolve) {
+        try {
+          var r = db.transaction(store, 'readonly').objectStore(store).get(key);
+          r.onsuccess = function () { resolve(r.result); };
+          r.onerror = function () { resolve(undefined); };
+        } catch (e) { resolve(undefined); }
+      });
+    });
+  }
+
+  function idbSet(store, key, val) {
+    memStore[store][key] = val;
+    return openDb().then(function (db) {
+      if (!db) return;
+      return new Promise(function (resolve) {
+        try {
+          var tx = db.transaction(store, 'readwrite');
+          tx.objectStore(store).put(val, key);
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { resolve(); };
+          tx.onabort = function () { resolve(); };
+        } catch (e) { resolve(); }
+      });
+    });
+  }
+
+  function idbClear(store) {
+    memStore[store] = {};
+    return openDb().then(function (db) {
+      if (!db) return;
+      return new Promise(function (resolve) {
+        try {
+          var tx = db.transaction(store, 'readwrite');
+          tx.objectStore(store).clear();
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { resolve(); };
+          tx.onabort = function () { resolve(); };
+        } catch (e) { resolve(); }
+      });
+    });
+  }
+
+  // ---------- talking to the Google web app ----------
+  function callApi(fn, args, opts) {
+    opts = opts || {};
+    if (!API_URL || API_URL.indexOf('PASTE_') === 0) return Promise.reject(new Error('NOT_CONFIGURED'));
+    var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, opts.timeout || 30000) : null;
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // plain text keeps the browser from sending a pre-check request
+      body: JSON.stringify({ fn: fn, args: args || [] }),
+      redirect: 'follow',
+      signal: controller ? controller.signal : undefined
+    }).then(function (resp) { return resp.text(); })
+      .then(function (text) {
+        var j;
+        try { j = JSON.parse(text); } catch (e) { throw new Error('BAD_REPLY'); }
+        if (!j.ok) throw new Error(j.error || 'SERVER_ERROR');
+        return j.result;
+      }, function () { throw new Error('NO_CONNECTION'); })
+      .then(function (r) { if (timer) clearTimeout(timer); return r; },
+            function (e) { if (timer) clearTimeout(timer); throw e; });
+  }
+
+  // ---------- state ----------
+  var DB = null;                 // the saved copy of the data
+  var diagramMem = {};           // cluster diagrams already loaded into memory
+  var syncing = false, lastOk = true, isReady = false, readyResolve;
+  var ready = new Promise(function (res) { readyResolve = res; });
+
+  // ---------- status line ----------
+  function fmtTime(ms) {
+    try {
+      var d = new Date(ms), now = new Date();
+      var t = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+      if (d.toDateString() === now.toDateString()) return 'today ' + t;
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ', ' + t;
+    } catch (e) { return ''; }
+  }
+  function diagramInfo() {
+    if (!DB || !DB.diagramRows || !DB.diagramRows.length) return '';
+    var have = DB.diagramRows.filter(function (r) { return diagramMem[String(r)]; }).length;
+    return ' · 🖼 ' + have + '/' + DB.diagramRows.length;
+  }
+  function setStatus(msg) {
+    var el = $('syncText');
+    if (!el) return;
+    if (msg) { el.textContent = msg; return; }
+    if (!DB) { el.textContent = 'No data saved yet'; return; }
+    if (isOnline() && lastOk) {
+      var checked = Number(ls.get(SYNC_KEY) || 0);
+      el.textContent = '🟢 Up to date' + (checked ? ' · checked ' + fmtTime(checked) : '') + diagramInfo();
+    } else {
+      el.textContent = (isOnline() ? '🟠 Could not refresh' : '🟠 Offline') + ' · data saved ' + fmtTime(Date.parse(DB.generatedAt)) + diagramInfo();
+    }
+  }
+
+  // ---------- first-time download box ----------
+  function showSetup(msg, isErr, showRetry) {
+    var o = $('setupOverlay');
+    if (!o) return;
+    o.classList.add('show');
+    var m = $('setupMsg');
+    if (m) { m.textContent = msg || ''; m.className = 'modal-sub' + (isErr ? ' err' : ''); }
+    var b = $('setupBtn');
+    if (b) b.style.display = showRetry ? 'inline-block' : 'none';
+  }
+  function hideSetup() { var o = $('setupOverlay'); if (o) o.classList.remove('show'); }
+
+  function friendly(e) {
+    var m = (e && e.message) || '';
+    if (/NO_CONNECTION/.test(m)) return 'No internet connection. You need to be online once to download the data to this phone.';
+    if (/NOT_CONFIGURED/.test(m)) return 'This copy of the app is not connected yet: the web app URL is missing in index.html.';
+    if (/BAD_REPLY/.test(m)) return 'The server sent an unexpected reply. Check the web app URL, and that its access is set to "Anyone".';
+    return 'Something went wrong: ' + m;
+  }
+
+  function applyBundle(b) {
+    DB = b;
+    return idbSet('kv', 'bundle', b).then(function () {
+      document.dispatchEvent(new CustomEvent('erps-data-updated'));
+    });
+  }
+
+  function warmDiagrams() {
+    if (!DB || !DB.diagramRows) return Promise.resolve();
+    return Promise.all(DB.diagramRows.map(function (r) {
+      var key = String(r);
+      if (diagramMem[key]) return null;
+      return idbGet('diagrams', key).then(function (v) { if (v) diagramMem[key] = v; });
+    }));
+  }
+
+  // First download on this phone
+  function firstDownload() {
+    showSetup('Downloading site data to this phone (first time only). This can take up to a minute…', false, false);
+    return callApi('getOfflineBundle', [], { timeout: 120000 }).then(function (b) {
+      return applyBundle(b).then(function () {
+        ls.set(SYNC_KEY, String(Date.now()));
+        lastOk = true;
+        hideSetup();
+        if (!isReady) { isReady = true; readyResolve(); }
+        setStatus();
+        warmDiagrams().then(function () { fetchDiagrams(false); });
+      });
+    }).catch(function (e) {
+      showSetup(friendly(e), true, true);
+    });
+  }
+
+  // ---------- keeping the saved copy fresh ----------
+  var syncTimer = null;
+  function scheduleSync(ms, opts) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(function () { sync(opts || {}); }, ms);
+  }
+
+  async function sync(opts) {
+    opts = opts || {};
+    if (syncing) return { busy: true };
+    if (!isOnline()) { lastOk = false; setStatus(); return { offline: true }; }
+    syncing = true;
+    setStatus('⟳ Syncing…');
+    try {
+      var need = !!opts.force || !DB || !DB.version;
+      if (!need) {
+        var v = await callApi('getDataVersion', [], { timeout: 20000 });
+        need = String(v) !== String(DB.version);
+      }
+      if (need) {
+        var b = await callApi('getOfflineBundle', [], { timeout: 120000 });
+        if (DB && DB.clusters && DB.clusters.length && (!b || !b.clusters || !b.clusters.length)) throw new Error('EMPTY_BUNDLE');
+        await applyBundle(b);
+      }
+      lastOk = true;
+      ls.set(SYNC_KEY, String(Date.now()));
+      setStatus();
+      fetchDiagrams(!!opts.diagrams);
+      return { updated: need };
+    } catch (e) {
+      lastOk = false;
+      setStatus();
+      return { error: e };
+    } finally {
+      syncing = false;
+    }
+  }
+
+  var diagBusy = false;
+  async function fetchDiagrams(all) {
+    if (diagBusy || !DB || !DB.diagramRows || !isOnline()) return;
+    diagBusy = true;
+    try {
+      var rows = DB.diagramRows.slice();
+      var i = 0;
+      var worker = async function () {
+        while (i < rows.length) {
+          var key = String(rows[i++]);
+          if (!all) {
+            var have = diagramMem[key] || await idbGet('diagrams', key);
+            if (have) { diagramMem[key] = have; continue; }
+          }
+          try {
+            var uri = await callApi('getClusterDiagram', [Number(key)], { timeout: 90000 });
+            if (uri) { diagramMem[key] = uri; await idbSet('diagrams', key, uri); setStatus(); }
+          } catch (e) {
+            /* any failure: try again at the next sync */
+          }
+        }
+      };
+      await Promise.all([worker(), worker()]);
+    } finally {
+      diagBusy = false;
+      setStatus();
+    }
+  }
+
+  async function diagramLocal(row) {
+    var key = String(row);
+    if (diagramMem[key]) return diagramMem[key];
+    var cached = await idbGet('diagrams', key);
+    if (cached) { diagramMem[key] = cached; return cached; }
+    if (!isOnline()) throw new Error('NOT_DOWNLOADED');
+    var uri = await callApi('getClusterDiagram', [Number(row)], { timeout: 90000 });
+    if (uri) { diagramMem[key] = uri; await idbSet('diagrams', key, uri); setStatus(); }
+    return uri || null;
+  }
+
+  // Sink ports change in the field, so ask the server first and fall back to the saved copy
+  async function sinkPortsFn(node) {
+    if (isOnline()) {
+      try {
+        var ports = await callApi('getSinkNodePorts', [node], { timeout: 25000 });
+        if (DB) { DB.sinkPorts[node] = ports; idbSet('kv', 'bundle', DB); }
+        return ports;
+      } catch (e) { /* use the saved copy below */ }
+    }
+    return (DB && DB.sinkPorts[node]) || [];
+  }
+
+  // ---------- the functions the app calls ----------
+  var LOCAL = {
+    getClusters: function () { return DB.clusters; },
+    getSites: function (c) { return DB.sites[c] || []; },
+    getSiteData: function (row) {
+      var d = DB.siteData[String(row)];
+      if (!d) throw new Error('SITE_NOT_FOUND');
+      return d;
+    },
+    getSiteSearchIndex: function () { return DB.searchIndex; },
+    getDashboardData: function () { return DB.dashboard; },
+    getAllPowerCases: function () { return DB.powerCases; },
+    getStatusReportData: function () { return DB.statusReport; },
+    getChecklistData: function () { return DB.checklist; },
+    getSinkNodes: function () { return DB.sinkNodes; }
+  };
+
+  var REMOTE = {
+    adminLogin: 1, checkAdmin: 1, adminLogout: 1,
+    saveSiteData: 1, savePowerStatus: 1, saveSinkNodePorts: 1, addSinkPort: 1, deleteSinkPort: 1
+  };
+  var CHANGES_DATA = { saveSiteData: 1, savePowerStatus: 1, saveSinkNodePorts: 1, addSinkPort: 1, deleteSinkPort: 1 };
+
+  // After a successful save, update the saved copy straight away, then refresh it fully
+  function patchLocal(fn, args) {
+    if (!DB) return;
+    if (fn === 'saveSiteData') {
+      var site = DB.siteData[String(args[0])], p = args[1] || {};
+      if (!site) return;
+      ['p1', 'p2', 'p3', 'p4', 'p5', 'e1_12', 'e2_34'].forEach(function (k) { if (p[k] !== undefined) site.cef[k] = p[k]; });
+      ['cefConfigStatus', 'migration2g', 'migration3g'].forEach(function (k) { if (p[k] !== undefined) site.status[k] = p[k]; });
+      if (p.sinkPort !== undefined) site.sink.sinkPort = p.sinkPort;
+    } else if (fn === 'savePowerStatus') {
+      var prow = Number(args[0]), status = args[1];
+      Object.keys(DB.siteData).forEach(function (k) {
+        var s = DB.siteData[k];
+        if (s.power && s.power.rowIndex === prow) s.power.fixStatus = status;
+      });
+      (DB.powerCases || []).forEach(function (c) { if (c.rowIndex === prow) c.fixStatus = status; });
+    } else if (fn === 'saveSinkNodePorts') {
+      DB.sinkPorts[args[0]] = (args[1] || []).map(function (p) {
+        return { rowIndex: Number(p.rowIndex), portId: p.portId, connectedTo: p.connectedTo };
+      });
+    }
+    idbSet('kv', 'bundle', DB);
+  }
+
+  async function remote(fn, args) {
+    var result = await callApi(fn, args, { timeout: 40000 });
+    if (CHANGES_DATA[fn] && !(result && result.success === false)) {
+      try { patchLocal(fn, args); } catch (e) {}
+      scheduleSync(2500, { force: true });
+    }
+    return result;
+  }
+
+  function dispatch(name, args) {
+    if (LOCAL[name]) return ready.then(function () { return clone(LOCAL[name].apply(null, args)); });
+    if (name === 'getClusterDiagram') return ready.then(function () { return diagramLocal(args[0]); });
+    if (name === 'getSinkNodePorts') return ready.then(function () { return sinkPortsFn(args[0]).then(clone); });
+    if (REMOTE[name]) return remote(name, args);
+    return Promise.reject(new Error('Unknown function ' + name));
+  }
+
+  function runner(ok, fail) {
+    return new Proxy({}, {
+      get: function (_, name) {
+        if (name === 'withSuccessHandler') return function (f) { return runner(f, fail); };
+        if (name === 'withFailureHandler') return function (f) { return runner(ok, f); };
+        return function () {
+          var args = Array.prototype.slice.call(arguments);
+          dispatch(String(name), args).then(function (res) {
+            if (ok) { try { ok(res); } catch (e) { setTimeout(function () { throw e; }, 0); } }
+          }, function (err) {
+            if (fail) { try { fail(err); } catch (e) { setTimeout(function () { throw e; }, 0); } }
+            else { console.error(err); }
+          });
+        };
+      }
+    });
+  }
+  window.google = { script: { run: runner(null, null) } };
+  window.__erps = { sync: sync, getDB: function () { return DB; } };
+
+  // ---------- buttons, events, install, service worker ----------
+  function wireUi() {
+    var syncBtn = $('syncBtn'), diagBtn = $('diagBtn'), setupBtn = $('setupBtn'), installBtn = $('installBtn');
+
+    if (syncBtn) syncBtn.addEventListener('click', function () {
+      if (!isReady) return;
+      if (!isOnline()) { toast('No internet connection.', true); return; }
+      sync({ force: true }).then(function (r) {
+        if (r && r.updated) toast('Data updated ✓');
+        else if (r && r.error) toast('Could not reach the server. Showing saved data.', true);
+      });
+    });
+    if (diagBtn) diagBtn.addEventListener('click', function () {
+      if (!isReady) return;
+      if (!isOnline()) { toast('No internet connection.', true); return; }
+      if (window.confirm('Download all cluster diagrams again?')) {
+        toast('Downloading diagrams…');
+        fetchDiagrams(true);
+      }
+    });
+    if (setupBtn) setupBtn.addEventListener('click', function () { firstDownload(); });
+
+    var deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault(); deferredPrompt = e;
+      if (installBtn) installBtn.style.display = 'inline-block';
+    });
+    window.addEventListener('appinstalled', function () {
+      deferredPrompt = null;
+      if (installBtn) installBtn.style.display = 'none';
+    });
+    if (installBtn) installBtn.addEventListener('click', function () {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt = null;
+      installBtn.style.display = 'none';
+    });
+
+    window.addEventListener('online', function () { lastOk = true; setStatus(); if (isReady) sync({}); });
+    window.addEventListener('offline', function () { setStatus(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && isReady && Date.now() - Number(ls.get(SYNC_KEY) || 0) > 5 * 60 * 1000) sync({});
+    });
+    setInterval(function () {
+      if (isReady && isOnline() && document.visibilityState === 'visible') sync({});
+    }, 10 * 60 * 1000);
+  }
+
+  function registerWorker() {
+    if (navigator.storage && navigator.storage.persist) { try { navigator.storage.persist(); } catch (e) {} }
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      reg.addEventListener('updatefound', function () {
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function () {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            toast('App update ready. Close and reopen the app to use it.');
+          }
+        });
+      });
+    }).catch(function () {});
+  }
+
+  async function init() {
+    wireUi();
+    registerWorker();
+    var b = await idbGet('kv', 'bundle');
+    if (b && b.clusters) {
+      DB = b; isReady = true; readyResolve();
+      setStatus();
+      warmDiagrams().then(function () { setStatus(); if (isOnline()) sync({}); });
+      return;
+    }
+    setStatus();
+    if (isOnline()) { firstDownload(); return; }
+    showSetup('No internet connection. You need to be online once to download the data to this phone.', true, true);
+  }
+
+  init();
+})();
+
+  </script>
+
+  <script>
+    const TABS = [
+      { key:'status', label:'STATUS', editable:true },
+      { key:'power',  label:'⚠ POWER', editable:true, conditional:true },
+      { key:'fourG',  label:'4G' },
+      { key:'threeG', label:'3G' },
+      { key:'twoG',   label:'2G' },
+      { key:'sink',   label:'SINK' },
+      { key:'cef',    label:'CEF CARD', editable:true }
+    ];
+
+    const FIELD_DEFS = {
+      status: [
+        ['cefConfigStatus','CEF Configuration', true],
+        ['migration2g','2G Migration', true],
+        ['migration3g','3G Migration', true]
+      ],
+      power: [
+        ['objectName','Object Name'], ['laserType','Laser Type'],
+        ['txPower','Tx Power (dBm)'], ['rxPower','Rx Power (dBm)'],
+        ['fixStatus','Fix Status', true]
+      ],
+      fourG: [
+        ['vlan1','VLAN'], ['vlan2','VLAN'], ['vlan3','VLAN'], ['vlan4','VLAN'], ['iwfMac','IWF MAC'],
+        ['cpuPortMgmtVlan','CPU Port MGMT VLAN'], ['cpuPortIp','CPU Port IP'], ['nextHopIpNetmask','Next HOP IP/Netmask Length']
+      ],
+      threeG: [
+        ['vlan3g','3G VLAN'], ['rnc','RNC'], ['rncPort','RNC Port - Source Port']
+      ],
+      twoG: [
+        ['bsc','BSC'], ['uplinkBscPort','Uplink to BSC - Source Port'],
+        ['bscExistingPort','BSC Existing Port'], ['bscNewPort','BSC New Port'],
+        ['vlan2g','VLAN'], ['e1','E1'], ['cefMac','CEF MAC'], ['iwfMacC1','IWF MAC-C1']
+      ],
+      sink: [
+        ['sinkNode','Sink Node'], ['sinkPort','Sink Port', true], ['sinkIp','Sink IP'], ['sinkNe','Sink NE']
+      ],
+      cef: [
+        ['p1','P1 (Electrical)', true], ['p2','P2', true], ['p3','P3', true],
+        ['p4','P4', true], ['p5','P5', true],
+        ['e1_12','E1 (1-2)', true], ['e2_34','E2 (3-4)', true]
+      ]
+    };
+
+    let currentSite = null;   // full getSiteData() payload
+    let activeTab = 'fourG';
+    let editing = false;
+
+    const clusterSelect = document.getElementById('clusterSelect');
+    const siteSelect = document.getElementById('siteSelect');
+    const main = document.getElementById('main');
+
+    // ---------- Storage helper (never breaks the app if the browser blocks it) ----------
+    const store = {
+      get: function(k){ try { return window.localStorage.getItem(k); } catch(e){ return null; } },
+      set: function(k, v){ try { window.localStorage.setItem(k, v); } catch(e){} },
+      remove: function(k){ try { window.localStorage.removeItem(k); } catch(e){} }
+    };
+
+    // ---------- View-only vs Admin ----------
+    let adminToken = store.get('erpsAdminToken') || '';
+    let isAdmin = false;   // set to true only after the server confirms the token
+
+    const adminBtn = document.getElementById('adminBtn');
+    const adminModal = document.getElementById('adminModal');
+    const adminPinInput = document.getElementById('adminPinInput');
+    const adminErr = document.getElementById('adminErr');
+    const adminLoginBtn = document.getElementById('adminLoginBtn');
+
+    function setAdminMode(on){
+      isAdmin = !!on;
+      adminBtn.textContent = isAdmin ? '🔓 Admin' : '🔒 View only';
+      adminBtn.className = 'dash-btn ' + (isAdmin ? 'admin-mode' : 'view-mode');
+      if (!isAdmin) editing = false;
+      if (currentSite) render();
+      if (typeof sinkPortsPanel !== 'undefined' && sinkPortsPanel.classList.contains('show') && currentPortsNode) renderPorts();
+    }
+
+    function openAdminLogin(){
+      adminPinInput.value = '';
+      adminErr.textContent = '';
+      adminModal.classList.add('show');
+      setTimeout(function(){ adminPinInput.focus(); }, 60);
+    }
+    function closeAdminLogin(){ adminModal.classList.remove('show'); adminPinInput.value = ''; }
+
+    function submitAdminLogin(){
+      const pin = adminPinInput.value.trim();
+      if (!pin) return;
+      adminLoginBtn.textContent = 'Checking…';
+      adminLoginBtn.style.opacity = '0.6';
+      google.script.run.withSuccessHandler(function(res){
+        adminLoginBtn.textContent = 'Log in';
+        adminLoginBtn.style.opacity = '1';
+        if (res && res.ok){
+          adminToken = res.token;
+          store.set('erpsAdminToken', adminToken);
+          closeAdminLogin();
+          setAdminMode(true);
+          showToast('Admin mode on ✓');
+        } else {
+          adminErr.textContent = (res && res.error) || 'Login failed.';
+        }
+      }).withFailureHandler(function(err){
+        adminLoginBtn.textContent = 'Log in';
+        adminLoginBtn.style.opacity = '1';
+        adminErr.textContent = ((err && err.message) || '').indexOf('NO_CONNECTION') !== -1 ? 'No internet connection. Connect to log in as admin.' : 'Could not reach the server: ' + ((err && err.message) || err);
+      }).adminLogin(pin);
+    }
+
+    function doAdminLogout(){
+      const t = adminToken;
+      adminToken = '';
+      store.remove('erpsAdminToken');
+      setAdminMode(false);
+      if (t) google.script.run.adminLogout(t);
+      showToast('Logged out. The app is now view-only.');
+    }
+
+    // Any save the server refuses because the login has expired lands here
+    function onWriteFail(err){
+      const msg = (err && err.message) ? err.message : String(err);
+      if (msg.indexOf('NOT_ADMIN') !== -1){
+        adminToken = '';
+        store.remove('erpsAdminToken');
+        setAdminMode(false);
+        showToast('Admin login expired. Log in again to edit.', true);
+      } else {
+        const sb = document.getElementById('saveBtn');
+        if (sb){ sb.textContent = 'Save changes'; sb.style.opacity = '1'; }
+        const pb = document.getElementById('savePortsBtn');
+        if (pb){ pb.textContent = 'Save Ports'; pb.style.opacity = '1'; }
+        showToast(msg.indexOf('NO_CONNECTION') !== -1 ? 'No internet connection. Nothing was saved.' : 'Save failed: ' + msg, true);
+      }
+    }
+
+    adminBtn.addEventListener('click', function(){
+      if (isAdmin){
+        if (confirm('Log out of admin mode?')) doAdminLogout();
+      } else {
+        openAdminLogin();
+      }
+    });
+    document.getElementById('adminCancelBtn').addEventListener('click', closeAdminLogin);
+    adminLoginBtn.addEventListener('click', submitAdminLogin);
+    adminPinInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submitAdminLogin(); });
+    adminModal.addEventListener('click', function(e){ if (e.target.id === 'adminModal') closeAdminLogin(); });
+
+    // Re-check a saved login when the app opens
+    if (adminToken){
+      google.script.run.withSuccessHandler(function(ok){
+        if (ok){ setAdminMode(true); }
+        else { adminToken = ''; store.remove('erpsAdminToken'); setAdminMode(false); }
+      }).withFailureHandler(function(){
+        setAdminMode(false);   // no connection: stay view-only, keep the saved login for later
+      }).checkAdmin(adminToken);
+    }
+    // Back online: confirm a saved admin login again
+    window.addEventListener('online', function(){
+      if (adminToken && !isAdmin){
+        google.script.run.withSuccessHandler(function(ok){ if (ok) setAdminMode(true); }).checkAdmin(adminToken);
+      }
+    });
+
+    window.onerror = function(msg, url, line, col, error){
+      showToast('JS error: ' + msg + ' (line ' + line + ')', true);
+      return false;
+    };
+
+    google.script.run.withSuccessHandler(populateClusters).withFailureHandler(showErr).getClusters();
+
+    // Chrome/some mobile browsers can restore a select's prior value on reload
+    // without firing 'change' — force a clean blank state so the user always
+    // makes an explicit pick.
+    window.addEventListener('pageshow', function(e){
+      // Returning from a phone call or another app keeps the page in memory
+      // (persisted = true). Leave the open site exactly as it is.
+      if (e && e.persisted) return;
+      clusterSelect.value = '';
+      siteSelect.innerHTML = '<option value="">Select site…</option>';
+      siteSelect.disabled = true;
+      currentSite = null;
+      renderEmpty();
+      restoreLastSite();
+    });
+
+    // If the page had to reload (for example after a long call), reopen the last
+    // site viewed within the previous 6 hours.
+    let lastRestoreDone = false;
+    function restoreLastSite(){
+      if (lastRestoreDone || clusterSelect.value || clusterSelect.options.length <= 1) return;
+      let last = null;
+      try { last = JSON.parse(store.get('erpsLastSite') || 'null'); } catch(e){ last = null; }
+      if (!last || !last.cluster || !last.row) return;
+      if (Date.now() - (last.t || 0) > 6 * 3600 * 1000) return;
+      const known = Array.prototype.some.call(clusterSelect.options, function(o){ return o.value === last.cluster; });
+      if (!known) return;
+      lastRestoreDone = true;
+      pendingSiteJumpRow = Number(last.row);
+      clusterSelect.value = last.cluster;
+      clusterSelect.dispatchEvent(new Event('change'));
+    }
+
+    function populateClusters(clusters){
+      clusters.forEach(function(c){
+        const opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        clusterSelect.appendChild(opt);
+      });
+      restoreLastSite();
+    }
+
+    let pendingSiteJumpRow = null;
+
+    // ---------- Site name search ----------
+    const siteSearch = document.getElementById('siteSearch');
+    const siteSearchResults = document.getElementById('siteSearchResults');
+    const siteSearchClear = document.getElementById('siteSearchClear');
+    let searchIndex = null;
+
+    google.script.run.withSuccessHandler(function(idx){
+      searchIndex = idx;
+    }).withFailureHandler(function(){
+      searchIndex = [];
+    }).getSiteSearchIndex();
+
+    siteSearch.addEventListener('input', function(){
+      const q = siteSearch.value.trim();
+      siteSearchClear.style.display = q ? 'block' : 'none';
+      if (!q){ hideSearchResults(); return; }
+      if (searchIndex === null){
+        siteSearchResults.innerHTML = '<div class="search-none">Loading sites…</div>';
+        siteSearchResults.classList.add('show');
+        return;
+      }
+      const ql = q.toLowerCase();
+      const matches = searchIndex.filter(function(s){
+        return s.label.toLowerCase().indexOf(ql) !== -1 ||
+               (s.cluster || '').toLowerCase().indexOf(ql) !== -1;
+      }).slice(0, 25);
+
+      if (matches.length === 0){
+        siteSearchResults.innerHTML = '<div class="search-none">No site matches “' + esc(q) + '”</div>';
+      } else {
+        siteSearchResults.innerHTML = matches.map(function(s){
+          return '<div class="search-item" data-cluster="' + esc(s.cluster) + '" data-row="' + s.rowIndex + '">' +
+                 '<div class="si-name">' + highlightMatch(s.label, q) + '</div>' +
+                 '<div class="si-cluster">' + esc(s.cluster) + '</div></div>';
+        }).join('');
+        siteSearchResults.querySelectorAll('.search-item').forEach(function(el){
+          el.addEventListener('click', function(){
+            const cluster = el.getAttribute('data-cluster');
+            const row = Number(el.getAttribute('data-row'));
+            hideSearchResults();
+            siteSearch.value = '';
+            siteSearchClear.style.display = 'none';
+            siteSearch.blur();
+            pendingSiteJumpRow = row;
+            clusterSelect.value = cluster;
+            clusterSelect.dispatchEvent(new Event('change'));
+          });
+        });
+      }
+      siteSearchResults.classList.add('show');
+    });
+
+    siteSearchClear.addEventListener('click', function(){
+      siteSearch.value = '';
+      siteSearchClear.style.display = 'none';
+      hideSearchResults();
+      siteSearch.focus();
+    });
+
+    document.addEventListener('click', function(e){
+      if (!e.target.closest('.search-wrap')) hideSearchResults();
+    });
+
+    function hideSearchResults(){ siteSearchResults.classList.remove('show'); }
+
+    function highlightMatch(text, query){
+      const idx = text.toLowerCase().indexOf(query.toLowerCase());
+      if (idx === -1) return esc(text);
+      return esc(text.slice(0, idx)) + '<mark>' + esc(text.slice(idx, idx + query.length)) + '</mark>' + esc(text.slice(idx + query.length));
+    }
+
+    clusterSelect.addEventListener('change', function(){
+      siteSelect.innerHTML = '<option value="">Select site…</option>';
+      siteSelect.disabled = true;
+      currentSite = null;
+      renderEmpty();
+      if (!clusterSelect.value) return;
+      siteSelect.disabled = false;
+      siteSelect.innerHTML = '<option value="">Loading sites…</option>';
+      google.script.run.withSuccessHandler(function(sites){
+        siteSelect.innerHTML = '<option value="">Select site…</option>';
+        sites.forEach(function(s){
+          const opt = document.createElement('option');
+          opt.value = s.rowIndex;
+          opt.textContent = s.label;
+          siteSelect.appendChild(opt);
+        });
+        if (pendingSiteJumpRow !== null){
+          siteSelect.value = pendingSiteJumpRow;
+          pendingSiteJumpRow = null;
+          siteSelect.dispatchEvent(new Event('change'));
+        }
+      }).withFailureHandler(showErr).getSites(clusterSelect.value);
+    });
+
+    siteSelect.addEventListener('change', function(){
+      if (!siteSelect.value){ currentSite = null; renderEmpty(); return; }
+      renderLoading();
+      google.script.run.withSuccessHandler(function(data){
+        currentSite = data;
+        store.set('erpsLastSite', JSON.stringify({ cluster: clusterSelect.value, row: siteSelect.value, t: Date.now() }));
+        editing = false;
+        activeTab = 'status';
+        render();
+        loadDiagram();
+      }).withFailureHandler(function(err){
+        showToast('getSiteData FAILED: ' + (err.message || err), true);
+      }).getSiteData(siteSelect.value);
+    });
+
+    function powerBadge(fixStatus){
+      const v = (fixStatus || '').toString().trim();
+      const resolved = /^(completed?|resolved|fixed)$/i.test(v);
+      const cls = resolved ? 'badge-done' : 'badge-power';
+      const text = resolved ? 'Power: Fixed' : ('⚠ Power: ' + (v || 'Open issue'));
+      return '<div class="status-badge ' + cls + '"><span class="status-label">Optics</span>' +
+             '<span class="status-value">' + esc(text) + '</span></div>';
+    }
+
+    function statusBadge(label, value){
+      const v = (value || '').toString().trim();
+      let cls = 'badge-pending', text = 'Not started';
+      if (v) {
+        if (/^completed?$/i.test(v)) { cls = 'badge-done'; text = 'Completed'; }
+        else { cls = 'badge-progress'; text = v; }
+      }
+      return '<div class="status-badge ' + cls + '"><span class="status-label">' + esc(label) + '</span>' +
+             '<span class="status-value">' + esc(text) + '</span></div>';
+    }
+
+    // ERPS / VRRP status of the cluster: green = Completed, red = Not feasible,
+    // amber = anything else entered, grey italic = blank
+    function clusterStatusBadge(label, value){
+      const v = (value || '').toString().trim();
+      let cls = 'badge-pending', text = 'Not started';
+      if (v) {
+        if (/^completed?$/i.test(v)) { cls = 'badge-done'; text = 'Completed'; }
+        else if (/not[\s_-]*feasible|infeasible/i.test(v)) { cls = 'badge-power'; text = v; }
+        else { cls = 'badge-progress'; text = v; }
+      }
+      return '<div class="status-badge ' + cls + '"><span class="status-label">' + esc(label) + '</span>' +
+             '<span class="status-value">' + esc(text) + '</span></div>';
+    }
+
+    // Plain information badge (used for the Ring / Linear value from column E)
+    function infoBadge(label, value, emptyText){
+      const v = (value || '').toString().trim();
+      const cls = v ? 'badge-info' : 'badge-pending';
+      return '<div class="status-badge ' + cls + '"><span class="status-label">' + esc(label) + '</span>' +
+             '<span class="status-value">' + esc(v || emptyText) + '</span></div>';
+    }
+
+    function diagramHtml(dataUri){
+      if (dataUri){
+        return '<div class="diagram-wrap" id="diagramWrap"><img src="' + dataUri + '">' +
+               '<div class="diagram-hint">Cluster diagram · tap to enlarge</div></div>';
+      }
+      return '<div id="diagramWrap"><div class="diagram-placeholder">No diagram uploaded for this cluster.</div></div>';
+    }
+
+    let diagramRequestId = 0;
+    function loadDiagram(){
+      if (!currentSite) return;
+      if (currentSite.diagramData !== undefined) { wireDiagramClick(); return; } // already fetched for this site
+      const myRequest = ++diagramRequestId;
+      const rowForThisRequest = currentSite.rowIndex;
+      google.script.run.withSuccessHandler(function(dataUri){
+        if (myRequest !== diagramRequestId || !currentSite || currentSite.rowIndex !== rowForThisRequest) return; // user moved on
+        currentSite.diagramData = dataUri || null;
+        const w = document.getElementById('diagramWrap');
+        if (w) w.outerHTML = diagramHtml(currentSite.diagramData);
+        wireDiagramClick();
+      }).withFailureHandler(function(){
+        if (myRequest !== diagramRequestId) return;
+        currentSite.diagramData = null;
+        const w = document.getElementById('diagramWrap');
+        if (w) w.innerHTML = '<div class="diagram-placeholder">Couldn\'t load diagram.</div>';
+      }).getClusterDiagram(currentSite.header.diagramRow);
+    }
+
+    function wireDiagramClick(){
+      const w = document.getElementById('diagramWrap');
+      if (w && currentSite && currentSite.diagramData) {
+        w.onclick = function(){ openLightbox(currentSite.diagramData); };
+      }
+    }
+
+    function openLightbox(dataUri){
+      document.getElementById('lightboxImg').src = dataUri;
+      document.getElementById('lightbox').classList.add('show');
+      const dl = document.getElementById('lightboxDownload');
+      dl.href = dataUri;
+      const clusterName = (currentSite && currentSite.header && currentSite.header.cluster) ? currentSite.header.cluster : 'cluster';
+      const ext = (dataUri.match(/^data:image\/(\w+);/) || [,'png'])[1];
+      dl.setAttribute('download', clusterName.replace(/[^a-z0-9_-]/gi, '_') + '-diagram.' + ext);
+    }
+    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+    document.getElementById('lightbox').addEventListener('click', function(e){
+      if (e.target.id === 'lightbox') closeLightbox();
+    });
+    function closeLightbox(){ document.getElementById('lightbox').classList.remove('show'); }
+
+    // ---------- Dashboard ----------
+    const dashboard = document.getElementById('dashboard');
+    const dashBody = document.getElementById('dashBody');
+    let dashboardCache = null;
+
+    document.getElementById('dashBtn').addEventListener('click', openDashboard);
+    document.getElementById('dashCloseBtn').addEventListener('click', closeDashboard);
+
+    function openDashboard(){
+      dashboard.classList.add('show');
+      if (dashboardCache){ renderDashboard(dashboardCache); return; }
+      dashBody.innerHTML = '<div class="loading"><div class="spinner"></div>Loading dashboard…</div>';
+      google.script.run.withSuccessHandler(function(data){
+        dashboardCache = data;
+        renderDashboard(data);
+      }).withFailureHandler(function(err){
+        dashBody.innerHTML = '<div class="loading" style="color:var(--danger);">Failed to load: ' + esc(err.message || err) + '</div>';
+      }).getDashboardData();
+    }
+
+    function closeDashboard(){ dashboard.classList.remove('show'); }
+
+    function pct(n, total){ return total > 0 ? Math.round((n / total) * 100) : 0; }
+
+    function renderDashboard(data){
+      const t = data.totals;
+      let html = '';
+
+      html += '<div class="dash-actions no-print">' +
+              '<div class="btn add-port" id="downloadDashboardBtn" style="flex:0 0 auto; padding:8px 16px;">⬇ CSV</div>' +
+              '<div class="btn save-ports" id="downloadDashboardPdfBtn" style="flex:0 0 auto; padding:8px 16px;">🖨 Download PDF</div>' +
+              '</div>';
+
+      html += '<div class="tiles">';
+      html += tile('CEF Config', t.cef, t.cefApplicable, t.sites - t.cefApplicable);
+      html += tile('2G Migration', t.mig2g, t.mig2gApplicable, t.sites - t.mig2gApplicable);
+      html += tile('3G Migration', t.mig3g, t.mig3gApplicable, t.sites - t.mig3gApplicable);
+      html += '</div>';
+
+      html += '<div class="section-title">Clusters (' + data.clusters.length + ')</div>';
+      data.clusters.forEach(function(c){
+        html += '<div class="cluster-row" data-cluster="' + esc(c.cluster) + '">';
+        html += '  <div style="flex:1;"><div class="c-name">' + esc(c.cluster) + '</div>' +
+                '<div class="c-sites">' + c.sites + ' site' + (c.sites === 1 ? '' : 's') + '</div></div>';
+        html += '  <div class="mini-stats">';
+        html += miniStat('CEF', c.cef, c.cefApplicable);
+        html += miniStat('2G', c.mig2g, c.mig2gApplicable);
+        html += miniStat('3G', c.mig3g, c.mig3gApplicable);
+        html += '  </div>';
+        html += '  <div class="chev">›</div>';
+        html += '</div>';
+      });
+
+      html += '<div class="section-title">Pending Work (' + data.pending.length + ')</div>';
+      if (data.pending.length === 0){
+        html += '<div class="all-clear">✓ All sites fully completed</div>';
+      } else {
+        data.pending.forEach(function(p){
+          html += '<div class="pending-item" data-cluster="' + esc(p.cluster) + '" data-row="' + p.rowIndex + '">';
+          html += '  <div class="p-site">' + esc(p.site) + '</div>';
+          html += '  <div class="p-cluster">' + esc(p.cluster) + '</div>';
+          html += '  <div class="p-flags">';
+          html += '<span class="p-flag ' + (p.cefDone ? '' : 'pending') + '">CEF: ' + esc(p.cefStatus) + '</span>';
+          html += '<span class="p-flag ' + (p.mig2gDone ? '' : 'pending') + '">2G: ' + esc(p.mig2gStatus) + '</span>';
+          html += '<span class="p-flag ' + (p.mig3gDone ? '' : 'pending') + '">3G: ' + esc(p.mig3gStatus) + '</span>';
+          html += '  </div>';
+          html += '</div>';
+        });
+      }
+
+      dashBody.innerHTML = html;
+
+      dashBody.querySelectorAll('.cluster-row, .pending-item').forEach(function(el){
+        el.addEventListener('click', function(){
+          jumpToCluster(el.getAttribute('data-cluster'));
+        });
+      });
+
+      document.getElementById('downloadDashboardBtn').addEventListener('click', function(){
+        downloadDashboardCSV(data);
+      });
+      document.getElementById('downloadDashboardPdfBtn').addEventListener('click', function(){
+        downloadDashboardPDF(data);
+      });
+    }
+
+    function tile(label, n, total, naCount){
+      const naLabel = naCount > 0 ? '<div class="tile-na">' + naCount + ' N/A (skipped)</div>' : '';
+      return '<div class="tile"><div class="tile-num">' + n + '/' + total + '</div>' +
+             '<div class="tile-label">' + esc(label) + '</div>' +
+             '<div class="tile-bar"><div class="tile-bar-fill" style="width:' + pct(n,total) + '%;"></div></div>' +
+             naLabel + '</div>';
+    }
+
+    function miniStat(label, n, total){
+      const cls = n === total && total > 0 ? 'done' : (n > 0 ? 'partial' : '');
+      return '<div class="mini-stat ' + cls + '"><div class="mini-num">' + n + '/' + total + '</div><div class="mini-tag">' + esc(label) + '</div></div>';
+    }
+
+    function csvEscape(v){
+      const s = (v === undefined || v === null) ? '' : v.toString();
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+
+    function downloadDashboardCSV(data){
+      const lines = [];
+      lines.push(['Cluster','Total Sites','CEF Applicable','CEF Completed','2G Applicable','2G Completed','3G Applicable','3G Completed'].map(csvEscape).join(','));
+      data.clusters.forEach(function(c){
+        lines.push([c.cluster, c.sites, c.cefApplicable, c.cef, c.mig2gApplicable, c.mig2g, c.mig3gApplicable, c.mig3g].map(csvEscape).join(','));
+      });
+      lines.push('');
+      lines.push(['TOTAL', data.totals.sites, data.totals.cefApplicable, data.totals.cef, data.totals.mig2gApplicable, data.totals.mig2g, data.totals.mig3gApplicable, data.totals.mig3g].map(csvEscape).join(','));
+      lines.push('');
+      lines.push(['Pending Site','Cluster','CEF Status','2G Status','3G Status'].map(csvEscape).join(','));
+      data.pending.forEach(function(p){
+        lines.push([p.site, p.cluster, p.cefStatus, p.mig2gStatus, p.mig3gStatus].map(csvEscape).join(','));
+      });
+
+      const csvContent = lines.join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0,10);
+      a.download = 'ERPS_Dashboard_' + dateStr + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    }
+
+    function downloadDashboardPDF(data){
+      if (typeof window.jspdf === 'undefined'){
+        showToast('PDF library failed to load — check your internet connection.', true);
+        return;
+      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const pageW = 210, marginX = 15;
+      const contentW = pageW - marginX * 2;
+      let y = 18;
+
+      const NAVY = [31, 59, 87];
+      const GREEN = [67, 209, 122];
+      const AMBER = [204, 140, 20];
+      const LIGHTBLUE = [220, 230, 240];
+      const GRAY = [110, 110, 110];
+      const DARKTEXT = [20, 20, 20];
+
+      function checkPageBreak(need){
+        if (y + need > 285){ doc.addPage(); y = 18; }
+      }
+
+      // Title
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(NAVY[0],NAVY[1],NAVY[2]);
+      doc.text('ALATHUR NW ERPS MIGRATION', pageW/2, y, { align: 'center' }); y += 6;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(80,80,80);
+      doc.text('Migration Dashboard', pageW/2, y, { align: 'center' }); y += 5;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+      doc.text('Generated on ' + dateStr + '  ·  Built by Sarath Ganga S, JE', pageW/2, y, { align:'center' }); y += 10;
+
+      // Tiles
+      const t = data.totals;
+      const tileDefs = [
+        ['CEF Config', t.cef, t.cefApplicable, t.sites - t.cefApplicable],
+        ['2G Migration', t.mig2g, t.mig2gApplicable, t.sites - t.mig2gApplicable],
+        ['3G Migration', t.mig3g, t.mig3gApplicable, t.sites - t.mig3gApplicable]
+      ];
+      const tileW = (contentW - 8) / 3, tileH = 26;
+      tileDefs.forEach(function(td, i){
+        const x = marginX + i * (tileW + 4);
+        doc.setFillColor(NAVY[0],NAVY[1],NAVY[2]);
+        doc.roundedRect(x, y, tileW, tileH, 2, 2, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(255,255,255);
+        doc.text(td[1] + ' / ' + td[2], x + tileW/2, y + 10, { align:'center' });
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(200,215,230);
+        doc.text(td[0], x + tileW/2, y + 16, { align:'center' });
+        const pctVal = td[2] > 0 ? (td[1]/td[2]) : 0;
+        doc.setFillColor(60,80,100); doc.rect(x+4, y+19, tileW-8, 1.5, 'F');
+        doc.setFillColor(GREEN[0],GREEN[1],GREEN[2]); doc.rect(x+4, y+19, (tileW-8)*pctVal, 1.5, 'F');
+        if (td[3] > 0){
+          doc.setFontSize(6.5); doc.setTextColor(180,195,210);
+          doc.text(td[3] + ' N/A (skipped)', x + tileW/2, y + 23.5, { align:'center' });
+        }
+      });
+      y += tileH + 8;
+
+      // Cluster table
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(NAVY[0],NAVY[1],NAVY[2]);
+      doc.text('Clusters (' + data.clusters.length + ')', marginX, y); y += 5;
+
+      data.clusters.forEach(function(c){
+        checkPageBreak(9);
+        doc.setFillColor(LIGHTBLUE[0],LIGHTBLUE[1],LIGHTBLUE[2]);
+        doc.rect(marginX, y, contentW, 8, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(NAVY[0],NAVY[1],NAVY[2]);
+        doc.text(c.cluster + '  (' + c.sites + ' sites)', marginX + 3, y + 5.5);
+
+        function statText(n, total){ return n + '/' + total; }
+        function statColor(n, total){ return (total > 0 && n === total) ? GREEN : AMBER; }
+
+        const colW = 30, startX = marginX + contentW - colW*3 - 6;
+        [['CEF', c.cef, c.cefApplicable], ['2G', c.mig2g, c.mig2gApplicable], ['3G', c.mig3g, c.mig3gApplicable]].forEach(function(s, i){
+          const cx = startX + i * (colW + 3);
+          const col = statColor(s[1], s[2]);
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(col[0],col[1],col[2]);
+          doc.text(s[0] + ' ' + statText(s[1], s[2]), cx, y + 5.5);
+        });
+        y += 8;
+      });
+      y += 4;
+
+      // Pending list
+      checkPageBreak(10);
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(NAVY[0],NAVY[1],NAVY[2]);
+      doc.text('Pending Work (' + data.pending.length + ')', marginX, y); y += 6;
+
+      if (data.pending.length === 0){
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(GREEN[0],GREEN[1],GREEN[2]);
+        doc.text('All sites fully completed', marginX, y); y += 6;
+      } else {
+        data.pending.forEach(function(p){
+          checkPageBreak(14);
+          doc.setFillColor(245,247,250); doc.rect(marginX, y, contentW, 12, 'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(DARKTEXT[0],DARKTEXT[1],DARKTEXT[2]);
+          doc.text(p.site, marginX + 3, y + 5);
+          doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+          doc.text(p.cluster, marginX + 3, y + 9);
+          const flagText = 'CEF: ' + p.cefStatus + '    2G: ' + p.mig2gStatus + '    3G: ' + p.mig3gStatus;
+          doc.setFontSize(6.5); doc.setTextColor(150,90,10);
+          doc.text(flagText, marginX + contentW - 3, y + 7, { align:'right', maxWidth: contentW - 60 });
+          y += 13;
+        });
+      }
+
+      const filenameDate = now.toISOString().slice(0,10);
+      doc.save('ERPS_Dashboard_' + filenameDate + '.pdf');
+    }
+
+    function jumpToCluster(clusterName){
+      closeDashboard();
+      clusterSelect.value = clusterName;
+      clusterSelect.dispatchEvent(new Event('change'));
+    }
+
+    // ---------- Power Level Cases ----------
+    const powerCasesPanel = document.getElementById('powerCasesPanel');
+    const powerCasesBody = document.getElementById('powerCasesBody');
+    let powerCasesCache = null;
+
+    document.getElementById('powerCasesBtn').addEventListener('click', openPowerCases);
+    document.getElementById('powerCasesCloseBtn').addEventListener('click', closePowerCases);
+
+    function openPowerCases(){
+      powerCasesPanel.classList.add('show');
+      if (powerCasesCache){ renderPowerCases(powerCasesCache); return; }
+      powerCasesBody.innerHTML = '<div class="loading"><div class="spinner"></div>Loading power cases…</div>';
+      google.script.run.withSuccessHandler(function(data){
+        powerCasesCache = data;
+        renderPowerCases(data);
+      }).withFailureHandler(function(err){
+        powerCasesBody.innerHTML = '<div class="loading" style="color:var(--danger);">Failed to load: ' + esc(err.message || err) + '</div>';
+      }).getAllPowerCases();
+    }
+
+    function closePowerCases(){ powerCasesPanel.classList.remove('show'); }
+
+    function renderPowerCases(cases){
+      let html = '';
+      const resolvedCount = cases.filter(function(c){ return /^(completed?|resolved|fixed)$/i.test((c.fixStatus||'').trim()); }).length;
+      html += '<div class="power-summary">' + cases.length + ' flagged sites &nbsp;·&nbsp; ' + resolvedCount + ' resolved &nbsp;·&nbsp; ' + (cases.length - resolvedCount) + ' open</div>';
+
+      if (cases.length === 0){
+        html += '<div class="all-clear">✓ No power level issues on file</div>';
+      } else {
+        cases.forEach(function(c){
+          const resolved = /^(completed?|resolved|fixed)$/i.test((c.fixStatus||'').trim());
+          html += '<div class="power-case" data-cluster="' + esc(c.cluster) + '" data-workrow="' + (c.workRowIndex || '') + '">';
+          html += '  <div class="pc-top"><div class="pc-site">' + esc(c.siteName) + '</div>' +
+                  '<div class="pc-cluster">' + esc(c.cluster || 'not linked') + '</div></div>';
+          html += '  <div class="pc-readings">' +
+                  '<div><b>Object</b>' + esc(c.objectName || '—') + '</div>' +
+                  '<div><b>Tx (dBm)</b>' + esc(c.txPower || '—') + '</div>' +
+                  '<div><b>Rx (dBm)</b>' + esc(c.rxPower || '—') + '</div>' +
+                  '</div>';
+          html += '  <div class="pc-status ' + (resolved ? 'resolved' : 'open') + '">' + esc(c.fixStatus || 'Open issue') + '</div>';
+          html += '</div>';
+        });
+      }
+      powerCasesBody.innerHTML = html;
+
+      powerCasesBody.querySelectorAll('.power-case').forEach(function(el){
+        el.addEventListener('click', function(){
+          const cluster = el.getAttribute('data-cluster');
+          const workRow = el.getAttribute('data-workrow');
+          if (!cluster || !workRow){
+            showToast('This site isn\'t linked to a Work Data row yet.', true);
+            return;
+          }
+          closePowerCases();
+          pendingSiteJumpRow = Number(workRow);
+          clusterSelect.value = cluster;
+          clusterSelect.dispatchEvent(new Event('change'));
+        });
+      });
+    }
+
+    // ---------- Status Report (for manager) ----------
+    const statusReportPanel = document.getElementById('statusReportPanel');
+    const statusReportBody = document.getElementById('statusReportBody');
+    let statusReportCache = null;
+
+    document.getElementById('statusReportBtn').addEventListener('click', openStatusReport);
+    document.getElementById('statusReportCloseBtn').addEventListener('click', closeStatusReport);
+    document.getElementById('printStatusReportBtn').addEventListener('click', function(){ window.print(); });
+
+    function openStatusReport(){
+      statusReportPanel.classList.add('show');
+      if (statusReportCache){ renderStatusReport(statusReportCache); return; }
+      statusReportBody.innerHTML = '<div class="loading"><div class="spinner"></div>Loading status report…</div>';
+      google.script.run.withSuccessHandler(function(data){
+        statusReportCache = data;
+        renderStatusReport(data);
+      }).withFailureHandler(function(err){
+        statusReportBody.innerHTML = '<div class="loading" style="color:var(--danger);">Failed to load: ' + esc(err.message || err) + '</div>';
+      }).getStatusReportData();
+    }
+
+    function closeStatusReport(){ statusReportPanel.classList.remove('show'); }
+
+    function reportPill(value){
+      const v = (value || '').toString().trim();
+      const done = v === 'Completed';
+      const cls = done ? 'done' : 'pending';
+      const text = v || 'Not started';
+      return '<span class="report-pill ' + cls + '">' + esc(text) + '</span>';
+    }
+
+    function renderStatusReport(sites){
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+
+      let html = '<div class="checklist-title">' +
+                  '<h1>ALATHUR NW ERPS MIGRATION</h1>' +
+                  '<div class="sub">Migration Status Report</div>' +
+                  '<div class="by">Built by Sarath Ganga S, JE</div>' +
+                  '</div>';
+      html += '<div class="report-meta">Generated on ' + esc(dateStr) + ' &nbsp;\u00b7&nbsp; ' + sites.length + ' sites</div>';
+
+      html += '<table class="report-table"><thead><tr>' +
+              '<th>ENode B</th><th>CEF Config</th><th>2G Migration</th><th>3G Migration</th>' +
+              '</tr></thead><tbody>';
+
+      let lastCluster = null;
+      sites.forEach(function(site){
+        if (site.cluster !== lastCluster){
+          html += '<tr class="report-cluster-row"><td colspan="4">' + esc(site.cluster) +
+                  '<span class="cluster-extra">ERPS: ' + esc(site.erpsStatus || 'Not started') +
+                  ' &nbsp;·&nbsp; VRRP: ' + esc(site.vrrpStatus || 'Not started') + '</span></td></tr>';
+          lastCluster = site.cluster;
+        }
+        html += '<tr><td>' + esc(site.enodeB) + '</td>' +
+                '<td>' + reportPill(site.cefConfigStatus) + '</td>' +
+                '<td>' + reportPill(site.migration2g) + '</td>' +
+                '<td>' + reportPill(site.migration3g) + '</td></tr>';
+      });
+
+      html += '</tbody></table>';
+      statusReportBody.innerHTML = '<div class="paper-preview">' + html + '</div>';
+    }
+
+    // ---------- Field Verification Checklist ----------
+    const checklistPanel = document.getElementById('checklistPanel');
+    const checklistBody = document.getElementById('checklistBody');
+    let checklistCache = null;
+
+    document.getElementById('checklistBtn').addEventListener('click', openChecklist);
+    document.getElementById('checklistCloseBtn').addEventListener('click', closeChecklist);
+    document.getElementById('printChecklistBtn').addEventListener('click', function(){ window.print(); });
+
+    function openChecklist(){
+      checklistPanel.classList.add('show');
+      if (checklistCache){ renderChecklist(checklistCache); return; }
+      checklistBody.innerHTML = '<div class="loading"><div class="spinner"></div>Loading checklist…</div>';
+      google.script.run.withSuccessHandler(function(data){
+        checklistCache = data;
+        renderChecklist(data);
+      }).withFailureHandler(function(err){
+        checklistBody.innerHTML = '<div class="loading" style="color:var(--danger);">Failed to load: ' + esc(err.message || err) + '</div>';
+      }).getChecklistData();
+    }
+
+    function closeChecklist(){ checklistPanel.classList.remove('show'); }
+
+    function checklistFieldRow(label, value){
+      const v = (value || '').toString().trim();
+      return '<div class="checklist-row"><div class="cl-label">' + esc(label) + '</div>' +
+             '<div class="cl-value">' + (v ? esc(v) : '—') + '</div></div>';
+    }
+
+    function checklistCardHtml(site){
+      let html = '<div class="checklist-card">';
+      html += '<div class="checklist-card-header">' + esc(site.enodeB) +
+              '<span class="cl-cluster">(' + esc(site.cluster) + ')</span></div>';
+      html += checklistFieldRow('4G VLAN', site.vlan4g);
+      html += checklistFieldRow('IWF MAC', site.iwfMac);
+      html += checklistFieldRow('3G VLAN', site.vlan3g);
+      html += checklistFieldRow('RNC', site.rnc);
+      html += checklistFieldRow('BSC', site.bsc);
+      html += checklistFieldRow('BSC Existing Port', site.bscExistingPort);
+      html += checklistFieldRow('BSC New Port', site.bscNewPort);
+      html += checklistFieldRow('2G VLAN', site.vlan2g);
+      html += checklistFieldRow('Sink Port', site.sinkPort);
+      html += '<div class="checklist-checks">' +
+              '<span><span class="box"></span>CEF Migration</span>' +
+              '<span><span class="box"></span>2G Migration</span>' +
+              '<span><span class="box"></span>3G Migration</span>' +
+              '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    function renderChecklist(sites){
+      let html = '<div class="checklist-title">' +
+                  '<h1>ALATHUR NW ERPS MIGRATION</h1>' +
+                  '<div class="sub">Field Verification Checklist</div>' +
+                  '<div class="by">Built by Sarath Ganga S, JE</div>' +
+                  '</div>';
+      if (!sites || sites.length === 0){
+        html += '<div class="port-empty">No sites found in Work Data.</div>';
+      } else {
+        sites.forEach(function(site, i){
+          html += checklistCardHtml(site);
+          const isLastOnPage = (i + 1) % 3 === 0 && i !== sites.length - 1;
+          if (isLastOnPage) html += '<div class="checklist-page"></div>';
+        });
+      }
+      checklistBody.innerHTML = '<div class="paper-preview">' + html + '</div>';
+    }
+
+
+    const sinkPortsPanel = document.getElementById('sinkPortsPanel');
+    const sinkNodeSelect = document.getElementById('sinkNodeSelect');
+    const portsListWrap = document.getElementById('portsListWrap');
+    let currentPorts = [];
+    let currentPortsNode = '';
+
+    document.getElementById('sinkPortsBtn').addEventListener('click', openSinkPorts);
+    document.getElementById('sinkPortsCloseBtn').addEventListener('click', closeSinkPorts);
+
+    function openSinkPorts(){
+      sinkPortsPanel.classList.add('show');
+      if (sinkNodeSelect.options.length > 1) return; // already loaded once
+      google.script.run.withSuccessHandler(function(nodes){
+        nodes.forEach(function(n){
+          const opt = document.createElement('option');
+          opt.value = n; opt.textContent = n;
+          sinkNodeSelect.appendChild(opt);
+        });
+      }).withFailureHandler(showErr).getSinkNodes();
+    }
+
+    function closeSinkPorts(){ sinkPortsPanel.classList.remove('show'); }
+
+    sinkNodeSelect.addEventListener('change', function(){
+      currentPortsNode = sinkNodeSelect.value;
+      if (!currentPortsNode){ portsListWrap.innerHTML = ''; return; }
+      loadPorts();
+    });
+
+    function loadPorts(){
+      portsListWrap.innerHTML = '<div class="loading"><div class="spinner"></div>Loading ports…</div>';
+      google.script.run.withSuccessHandler(function(ports){
+        currentPorts = ports;
+        renderPorts();
+      }).withFailureHandler(showErr).getSinkNodePorts(currentPortsNode);
+    }
+
+    function renderPorts(){
+      let html = '';
+      if (currentPorts.length === 0){
+        html += '<div class="port-empty">No ports recorded yet for this node.</div>';
+      } else {
+        const ro = isAdmin ? '' : ' readonly';
+        currentPorts.forEach(function(p, i){
+          html += '<div class="port-row" data-row="' + p.rowIndex + '">' +
+                  '<input class="port-id" data-idx="' + i + '" data-role="portId"' + ro + ' value="' + esc(p.portId) + '">' +
+                  '<input class="port-conn" data-idx="' + i + '" data-role="connectedTo"' + ro + ' placeholder="Connected to…" value="' + esc(p.connectedTo || '') + '">' +
+                  (isAdmin ? '<button class="del-btn" data-idx="' + i + '">&times;</button>' : '') +
+                  '</div>';
+        });
+      }
+      if (isAdmin){
+        html += '<div class="port-actions">' +
+                '<div class="btn add-port" id="addPortBtn">+ Add Port</div>' +
+                '<div class="btn save-ports" id="savePortsBtn">Save Ports</div>' +
+                '</div>';
+      }
+      portsListWrap.innerHTML = html;
+
+      portsListWrap.querySelectorAll('.del-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          const idx = Number(btn.getAttribute('data-idx'));
+          const port = currentPorts[idx];
+          if (!confirm('Remove port ' + port.portId + '?')) return;
+          google.script.run.withSuccessHandler(function(){
+            showToast('Port removed');
+            loadPorts();
+          }).withFailureHandler(onWriteFail).deleteSinkPort(port.rowIndex, adminToken);
+        });
+      });
+
+      if (isAdmin) document.getElementById('addPortBtn').addEventListener('click', function(){
+        google.script.run.withSuccessHandler(function(){
+          loadPorts();
+        }).withFailureHandler(onWriteFail).addSinkPort(currentPortsNode, adminToken);
+      });
+
+      if (isAdmin) document.getElementById('savePortsBtn').addEventListener('click', function(){
+        const rows = portsListWrap.querySelectorAll('.port-row');
+        const payload = [];
+        rows.forEach(function(row){
+          const rowIndex = row.getAttribute('data-row');
+          const portId = row.querySelector('[data-role="portId"]').value.trim();
+          const connectedTo = row.querySelector('[data-role="connectedTo"]').value.trim();
+          payload.push({ rowIndex: rowIndex, portId: portId, connectedTo: connectedTo });
+        });
+        const saveBtn = document.getElementById('savePortsBtn');
+        saveBtn.textContent = 'Saving…';
+        saveBtn.style.opacity = '0.6';
+        google.script.run.withSuccessHandler(function(res){
+          if (res.success){
+            showToast('Ports saved ✓');
+            loadPorts();
+          } else {
+            showToast('Save failed: ' + res.error, true);
+          }
+        }).withFailureHandler(function(err){
+          onWriteFail(err);
+        }).saveSinkNodePorts(currentPortsNode, payload, adminToken);
+      });
+    }
+
+    function renderEmpty(){
+      main.innerHTML = '<div class="empty-state"><div class="glyph mono">░ ░ ░</div>' +
+        '<div>Pick a cluster, then a site,<br>to load its 2G / 3G / 4G / SINK details.</div></div>';
+    }
+
+    function renderLoading(){
+      main.innerHTML = '<div class="loading"><div class="spinner"></div>Loading site details…</div>';
+    }
+
+    function isFilled(obj){
+      return Object.keys(obj || {}).some(function(k){ return obj[k] !== '' && obj[k] !== undefined && obj[k] !== null; });
+    }
+
+    function render(){
+      if (!currentSite){ renderEmpty(); return; }
+      const h = currentSite.header;
+      const hasPower = !!currentSite.power;
+      const visibleTabs = TABS.filter(function(t){ return !t.conditional || hasPower; });
+      if (activeTab === 'power' && !hasPower) activeTab = 'status';
+
+      let html = '';
+      html += '<div class="site-card">';
+      html += '  <div class="row1"><div class="site-name">' + esc(h.eNodeB) + '</div>' +
+              '<div class="cluster-tag">' + esc(h.cluster) + '</div></div>';
+      html += '  <div class="link-path">' +
+              'Source Node: <b>' + esc(h.sourceNode) + '</b> &nbsp;·&nbsp; Source IP: <b>' + esc(h.sourceIP) + '</b>' +
+              '</div>';
+      html += '  <div class="status-row">' +
+              infoBadge('Ring / Linear', h.ringLinear, 'Not marked') +
+              clusterStatusBadge('ERPS', h.erpsStatus) +
+              clusterStatusBadge('VRRP', h.vrrpStatus) +
+              '</div>';
+      if (currentSite.diagramData !== undefined) {
+        html += diagramHtml(currentSite.diagramData);
+      } else {
+        html += '  <div id="diagramWrap"><div class="diagram-placeholder">Loading diagram…</div></div>';
+      }
+      html += '  <div class="status-row">' +
+              statusBadge('CEF Config', currentSite.status.cefConfigStatus) +
+              statusBadge('2G Migration', currentSite.status.migration2g) +
+              statusBadge('3G Migration', currentSite.status.migration3g) +
+              (hasPower ? powerBadge(currentSite.power.fixStatus) : '') +
+              '</div>';
+      html += '</div>';
+
+      html += '<div class="tabbar">';
+      visibleTabs.forEach(function(t){
+        const dataForFill = t.key === 'power' ? currentSite.power : currentSite[t.key];
+        const filled = isFilled(dataForFill);
+        const cls = ['tab'];
+        if (t.key === activeTab) cls.push('active');
+        if (filled) cls.push('filled');
+        if (t.editable && isAdmin) cls.push('editable-tab');
+        if (t.key === 'power') cls.push('power-tab');
+        html += '<div class="' + cls.join(' ') + '" data-tab="' + t.key + '"><span class="led"></span>' + t.label + '</div>';
+      });
+      html += '</div>';
+
+      const activeDef = visibleTabs.filter(function(t){ return t.key === activeTab; })[0] || visibleTabs[0];
+      const fields = FIELD_DEFS[activeTab];
+      const data = activeTab === 'power' ? currentSite.power : currentSite[activeTab];
+
+      if (activeDef.editable && isAdmin && !editing){
+        html += '<div class="btn-row"><div class="btn edit" id="editBtn">✎ Edit ' + esc(activeDef.label.replace('⚠ ','')) + '</div></div>';
+      }
+      if (activeDef.editable && isAdmin && editing){
+        html += '<div class="btn-row">' +
+                '<div class="btn cancel" id="cancelBtn">Cancel</div>' +
+                '<div class="btn save" id="saveBtn">Save changes</div>' +
+                '</div>';
+      }
+
+      html += '<div class="panel">';
+      fields.forEach(function(f){
+        const key = f[0], label = f[1], canEdit = !!f[2], type = f[3] || 'text';
+        const val = data ? data[key] : '';
+        html += '<div class="field">';
+        html += '<div class="field-label">' + esc(label) + '</div>';
+        if (editing && isAdmin && canEdit){
+          if (type === 'date'){
+            html += '<div class="field-value"><input type="date" data-field="' + key + '" data-type="date" value="' + esc(toIsoDate(val)) + '"></div>';
+          } else {
+            html += '<div class="field-value"><input type="text" data-field="' + key + '" value="' + esc(val || '') + '"></div>';
+          }
+        } else {
+          if (val || val === 0){
+            html += '<div class="field-value">' + esc(val) + '</div>';
+          } else {
+            html += '<div class="field-value blank">not set</div>';
+          }
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+
+      if (editing) {
+        html += '<div class="panel-note">⚠ Saving writes directly to the live sheet — double-check values before saving.</div>';
+      } else if (activeDef.editable && isAdmin) {
+        html += '<div class="panel-note" style="color:var(--muted);">These fields are normally filled in from the site visit.</div>';
+      }
+
+      main.innerHTML = html;
+
+      main.querySelectorAll('.tab').forEach(function(el){
+        el.addEventListener('click', function(){
+          activeTab = el.getAttribute('data-tab');
+          editing = false;
+          render();
+        });
+      });
+
+      const editBtn = document.getElementById('editBtn');
+      if (editBtn) editBtn.addEventListener('click', function(){ editing = true; render(); });
+
+      const cancelBtn = document.getElementById('cancelBtn');
+      if (cancelBtn) cancelBtn.addEventListener('click', function(){ editing = false; render(); });
+
+      const saveBtn = document.getElementById('saveBtn');
+      if (saveBtn) saveBtn.addEventListener('click', onSave);
+
+      wireDiagramClick();
+    }
+
+    function onSave(){
+      const inputs = main.querySelectorAll('[data-field]');
+      const payload = {};
+      inputs.forEach(function(inp){ payload[inp.getAttribute('data-field')] = inp.value.trim(); });
+
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.textContent = 'Saving…';
+      saveBtn.style.opacity = '0.6';
+
+      if (activeTab === 'power') {
+        google.script.run.withSuccessHandler(function(res){
+          if (res.success){
+            currentSite.power.fixStatus = payload.fixStatus;
+            editing = false;
+            render();
+            showToast('Saved to sheet ✓');
+          } else {
+            showToast('Save failed: ' + res.error, true);
+          }
+        }).withFailureHandler(function(err){
+          onWriteFail(err);
+        }).savePowerStatus(currentSite.power.rowIndex, payload.fixStatus, adminToken);
+        return;
+      }
+
+      google.script.run.withSuccessHandler(function(res){
+        if (res.success){
+          Object.keys(payload).forEach(function(k){
+            if (currentSite.cef[k] !== undefined) currentSite.cef[k] = payload[k];
+            if (currentSite.status[k] !== undefined) currentSite.status[k] = payload[k];
+          });
+          if (payload.sinkPort !== undefined) currentSite.sink.sinkPort = payload.sinkPort;
+          editing = false;
+          render();
+          showToast('Saved to sheet ✓');
+        } else {
+          showToast('Save failed: ' + res.error, true);
+        }
+      }).withFailureHandler(function(err){
+        onWriteFail(err);
+      }).saveSiteData(currentSite.rowIndex, payload, adminToken);
+    }
+
+    function showToast(msg, isErr){
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (isErr ? ' err' : '');
+      setTimeout(function(){ t.className = 'toast'; }, 2600);
+    }
+
+    function showErr(err){
+      showToast('Error: ' + (err.message || err), true);
+    }
+
+    function toIsoDate(val){
+      if (!val) return '';
+      // sheet gives us dd/mm/yyyy (see formatDate_ in Code.gs); <input type=date> needs yyyy-mm-dd
+      const parts = val.toString().split(/[\/\-]/);
+      if (parts.length !== 3) return '';
+      // if already yyyy-mm-dd (4-digit first part), pass through
+      if (parts[0].length === 4) return val;
+      const dd = parts[0].padStart(2,'0'), mm = parts[1].padStart(2,'0'), yyyy = parts[2];
+      return yyyy + '-' + mm + '-' + dd;
+    }
+
+    function toDisplayDate(iso){
+      if (!iso) return '';
+      const parts = iso.split('-');
+      if (parts.length !== 3) return iso;
+      return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+
+    // When fresh data arrives from a sync, redraw the report screens and refresh what is on screen
+    document.addEventListener('erps-data-updated', function(){
+      dashboardCache = null; powerCasesCache = null; statusReportCache = null; checklistCache = null;
+
+      google.script.run.withSuccessHandler(function(list){
+        const have = Array.prototype.slice.call(clusterSelect.options).map(function(o){ return o.value; }).filter(Boolean);
+        if (JSON.stringify(have) !== JSON.stringify(list)){
+          const keep = clusterSelect.value;
+          clusterSelect.innerHTML = '<option value="">Select cluster no…</option>';
+          populateClusters(list);
+          clusterSelect.value = keep;
+        }
+      }).getClusters();
+
+      if (currentSite && !editing){
+        const openRow = currentSite.rowIndex;
+        google.script.run.withSuccessHandler(function(d){
+          if (!currentSite || editing || currentSite.rowIndex !== d.rowIndex) return;
+          const a = Object.assign({}, d), b = Object.assign({}, currentSite);
+          delete a.diagramData; delete b.diagramData;
+          if (JSON.stringify(a) === JSON.stringify(b)) return;
+          d.diagramData = currentSite.diagramData;
+          currentSite = d;
+          render();
+          showToast('This site was updated');
+        }).getSiteData(openRow);
+      }
+    });
+
+    function esc(s){
+      if (s === undefined || s === null) return '';
+      return s.toString()
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>
