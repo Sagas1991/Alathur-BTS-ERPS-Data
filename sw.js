@@ -2,7 +2,7 @@
    The site data is saved separately inside the app (IndexedDB).
    When you upload a new version of any app file to GitHub, change VERSION below
    so phones pick up the new files. */
-const VERSION = 'erps-app-v1';
+const VERSION = 'erps-app-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './jspdf.umd.min.js'];
 
 self.addEventListener('install', function (event) {
