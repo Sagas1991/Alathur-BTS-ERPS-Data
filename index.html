@@ -427,7 +427,6 @@
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <div class="dash-btn" id="statusReportBtn">📋 Status Report</div>
         <div class="dash-btn" id="checklistBtn">🖨 Checklist</div>
-        <div class="dash-btn" id="sinkPortsBtn">🔌 Sink Ports</div>
         <div class="dash-btn" id="dashBtn">📊 Dashboard</div>
         <div class="dash-btn" id="powerCasesBtn" style="border-color:var(--danger); color:var(--danger); background:rgba(225,85,84,0.12);">⚡ Power Levels</div>
         <div class="dash-btn view-mode" id="adminBtn">🔒 View only</div>
@@ -514,19 +513,6 @@
     </div>
   </div>
 
-  <div class="dashboard" id="sinkPortsPanel">
-    <div class="dash-header">
-      <h2>Sink Node Ports</h2>
-      <button class="dash-close" id="sinkPortsCloseBtn">&times;</button>
-    </div>
-    <div class="dash-body" id="sinkPortsBody">
-      <select id="sinkNodeSelect" autocomplete="off">
-        <option value="">Select sink node…</option>
-      </select>
-      <div id="portsListWrap"></div>
-    </div>
-  </div>
-
   <div class="dashboard" id="statusReportPanel">
     <div class="dash-header no-print">
       <h2>Status Report</h2>
@@ -567,7 +553,7 @@
   // ====== CONNECTION SETTING ======================================
   // Paste the "Web app" URL of the deployment that has access set to
   // "Anyone". It ends with /exec.
-  var API_URL = 'https://script.google.com/macros/s/AKfycbzV8Rod3eDqkVp7FWZZDmPhCKfv0UXSF6fqkiE77gnPBkRH8pgWXsScLyfeGXReiImd/exec';
+  var API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
   // =================================================================
 
   var SYNC_KEY = 'erpsLastSync';
@@ -1093,7 +1079,6 @@
       adminBtn.className = 'dash-btn ' + (isAdmin ? 'admin-mode' : 'view-mode');
       if (!isAdmin) editing = false;
       if (currentSite) render();
-      if (typeof sinkPortsPanel !== 'undefined' && sinkPortsPanel.classList.contains('show') && currentPortsNode) renderPorts();
     }
 
     function openAdminLogin(){
@@ -1148,8 +1133,6 @@
       } else {
         const sb = document.getElementById('saveBtn');
         if (sb){ sb.textContent = 'Save changes'; sb.style.opacity = '1'; }
-        const pb = document.getElementById('savePortsBtn');
-        if (pb){ pb.textContent = 'Save Ports'; pb.style.opacity = '1'; }
         showToast(msg.indexOf('NO_CONNECTION') !== -1 ? 'No internet connection. Nothing was saved.' : 'Save failed: ' + msg, true);
       }
     }
@@ -1877,108 +1860,6 @@
       checklistBody.innerHTML = '<div class="paper-preview">' + html + '</div>';
     }
 
-
-    const sinkPortsPanel = document.getElementById('sinkPortsPanel');
-    const sinkNodeSelect = document.getElementById('sinkNodeSelect');
-    const portsListWrap = document.getElementById('portsListWrap');
-    let currentPorts = [];
-    let currentPortsNode = '';
-
-    document.getElementById('sinkPortsBtn').addEventListener('click', openSinkPorts);
-    document.getElementById('sinkPortsCloseBtn').addEventListener('click', closeSinkPorts);
-
-    function openSinkPorts(){
-      sinkPortsPanel.classList.add('show');
-      if (sinkNodeSelect.options.length > 1) return; // already loaded once
-      google.script.run.withSuccessHandler(function(nodes){
-        nodes.forEach(function(n){
-          const opt = document.createElement('option');
-          opt.value = n; opt.textContent = n;
-          sinkNodeSelect.appendChild(opt);
-        });
-      }).withFailureHandler(showErr).getSinkNodes();
-    }
-
-    function closeSinkPorts(){ sinkPortsPanel.classList.remove('show'); }
-
-    sinkNodeSelect.addEventListener('change', function(){
-      currentPortsNode = sinkNodeSelect.value;
-      if (!currentPortsNode){ portsListWrap.innerHTML = ''; return; }
-      loadPorts();
-    });
-
-    function loadPorts(){
-      portsListWrap.innerHTML = '<div class="loading"><div class="spinner"></div>Loading ports…</div>';
-      google.script.run.withSuccessHandler(function(ports){
-        currentPorts = ports;
-        renderPorts();
-      }).withFailureHandler(showErr).getSinkNodePorts(currentPortsNode);
-    }
-
-    function renderPorts(){
-      let html = '';
-      if (currentPorts.length === 0){
-        html += '<div class="port-empty">No ports recorded yet for this node.</div>';
-      } else {
-        const ro = isAdmin ? '' : ' readonly';
-        currentPorts.forEach(function(p, i){
-          html += '<div class="port-row" data-row="' + p.rowIndex + '">' +
-                  '<input class="port-id" data-idx="' + i + '" data-role="portId"' + ro + ' value="' + esc(p.portId) + '">' +
-                  '<input class="port-conn" data-idx="' + i + '" data-role="connectedTo"' + ro + ' placeholder="Connected to…" value="' + esc(p.connectedTo || '') + '">' +
-                  (isAdmin ? '<button class="del-btn" data-idx="' + i + '">&times;</button>' : '') +
-                  '</div>';
-        });
-      }
-      if (isAdmin){
-        html += '<div class="port-actions">' +
-                '<div class="btn add-port" id="addPortBtn">+ Add Port</div>' +
-                '<div class="btn save-ports" id="savePortsBtn">Save Ports</div>' +
-                '</div>';
-      }
-      portsListWrap.innerHTML = html;
-
-      portsListWrap.querySelectorAll('.del-btn').forEach(function(btn){
-        btn.addEventListener('click', function(){
-          const idx = Number(btn.getAttribute('data-idx'));
-          const port = currentPorts[idx];
-          if (!confirm('Remove port ' + port.portId + '?')) return;
-          google.script.run.withSuccessHandler(function(){
-            showToast('Port removed');
-            loadPorts();
-          }).withFailureHandler(onWriteFail).deleteSinkPort(port.rowIndex, adminToken);
-        });
-      });
-
-      if (isAdmin) document.getElementById('addPortBtn').addEventListener('click', function(){
-        google.script.run.withSuccessHandler(function(){
-          loadPorts();
-        }).withFailureHandler(onWriteFail).addSinkPort(currentPortsNode, adminToken);
-      });
-
-      if (isAdmin) document.getElementById('savePortsBtn').addEventListener('click', function(){
-        const rows = portsListWrap.querySelectorAll('.port-row');
-        const payload = [];
-        rows.forEach(function(row){
-          const rowIndex = row.getAttribute('data-row');
-          const portId = row.querySelector('[data-role="portId"]').value.trim();
-          const connectedTo = row.querySelector('[data-role="connectedTo"]').value.trim();
-          payload.push({ rowIndex: rowIndex, portId: portId, connectedTo: connectedTo });
-        });
-        const saveBtn = document.getElementById('savePortsBtn');
-        saveBtn.textContent = 'Saving…';
-        saveBtn.style.opacity = '0.6';
-        google.script.run.withSuccessHandler(function(res){
-          if (res.success){
-            showToast('Ports saved ✓');
-            loadPorts();
-          } else {
-            showToast('Save failed: ' + res.error, true);
-          }
-        }).withFailureHandler(function(err){
-          onWriteFail(err);
-        }).saveSinkNodePorts(currentPortsNode, payload, adminToken);
-      });
-    }
 
     function renderEmpty(){
       main.innerHTML = '<div class="empty-state"><div class="glyph mono">░ ░ ░</div>' +
