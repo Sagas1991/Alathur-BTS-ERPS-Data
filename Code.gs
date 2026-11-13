@@ -680,6 +680,21 @@ function showDashboardDialog() {
     pendingHtml = '<div class="allgood">🎉 No pending sites. Everything is complete.</div>';
   }
 
+  // 4G only sites, listed below the pending work
+  const fourList = d.fourGOnly || [];
+  let fourHtml = '';
+  let lastFourCluster = null;
+  fourList.forEach(function (s) {
+    if (s.cluster !== lastFourCluster) {
+      fourHtml += '<div class="pc-head">' + esc(s.cluster) + '</div>';
+      lastFourCluster = s.cluster;
+    }
+    fourHtml += '<div class="prow"><div class="pname">' + esc(s.site) + '</div></div>';
+  });
+  if (!fourList.length) {
+    fourHtml = '<div class="allgood" style="color:#555;">No sites are marked 4G only.</div>';
+  }
+
   const html = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<style>' +
     'body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f4f6f9;color:#111;}' +
@@ -725,6 +740,8 @@ function showDashboardDialog() {
     '<tbody>' + clusterRows + '</tbody></table>' +
     '<h2>Pending sites and reasons (' + d.pending.length + ')</h2>' +
     '<div class="plist">' + pendingHtml + '</div>' +
+    '<h2>4G only sites (' + fourList.length + ')</h2>' +
+    '<div class="plist">' + fourHtml + '</div>' +
     '<button class="printBtn no-print" onclick="window.print()">🖨 Print / Save PDF</button>' +
     '</body></html>';
 
@@ -1037,6 +1054,7 @@ function getOfflineBundle() {
   const bundle = {
     generatedAt: new Date().toISOString(),
     version: getDataVersion(),
+    schema: 2,   // bump when the bundle gets new fields, so phones refresh once
     clusters: [], sites: {}, siteData: {}, searchIndex: [],
     dashboard: null, powerCases: [], statusReport: [], checklist: [],
     sinkNodes: [], sinkPorts: {}, diagramRows: []
@@ -1681,7 +1699,7 @@ function getDashboardData() {
   if (rows.length === 0) {
     return {
       totals: { sites: 0, cef: 0, cefApplicable: 0, mig2g: 0, mig2gApplicable: 0, mig3g: 0, mig3gApplicable: 0 },
-      clusters: [], pending: []
+      clusters: [], pending: [], fourGOnly: []
     };
   }
 
@@ -1707,6 +1725,7 @@ function getDashboardData() {
   const clusterMap = {}; // clusterName -> { sites, cef, cefApplicable, mig2g, mig2gApplicable, mig3g, mig3gApplicable }
   const clusterOrder = [];
   const pending = [];
+  const fourGOnly = [];
 
   rows.forEach(function (r) {
     const idx = r.rowIndex - firstRow;
@@ -1717,6 +1736,11 @@ function getDashboardData() {
     const cefClass = classify(cefVal, null);
     const mig2gClass = classify(mig2gVal, '2g');
     const mig3gClass = classify(mig3gVal, '3g');
+
+    // 4G only: marked "4G only" in any status column, or neither 2G nor 3G exists at the site
+    const only4g = [cefVal, mig2gVal, mig3gVal].some(function (v) { return /4g\s*only/i.test((v || '').toString()); }) ||
+      ((mig2gVal || '').toString().trim().toLowerCase() === 'no 2g' && (mig3gVal || '').toString().trim().toLowerCase() === 'no 3g');
+    if (only4g) fourGOnly.push({ rowIndex: r.rowIndex, cluster: r.cluster, site: r.eNodeB || r.aEnd });
 
     if (!clusterMap[r.cluster]) {
       clusterMap[r.cluster] = {
@@ -1754,7 +1778,7 @@ function getDashboardData() {
     return acc;
   }, { sites: 0, cef: 0, cefApplicable: 0, mig2g: 0, mig2gApplicable: 0, mig3g: 0, mig3gApplicable: 0 });
 
-  return { totals: totals, clusters: clusters, pending: pending };
+  return { totals: totals, clusters: clusters, pending: pending, fourGOnly: fourGOnly };
 }
 
 // ---------------------------------------------------------------------------
