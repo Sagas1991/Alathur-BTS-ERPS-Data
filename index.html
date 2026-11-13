@@ -242,6 +242,12 @@
     }
     .p-flag.pending{ border-color:var(--warn); color:var(--warn); }
     .all-clear{ text-align:center; color:var(--accent); font-size:13.5px; padding:20px 0; }
+    .fourg-item{
+      background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent);
+      border-radius:8px; padding:10px 12px; margin-bottom:8px; cursor:pointer;
+    }
+    .fourg-item .p-site{ font-size:13.5px; font-weight:600; }
+    .fourg-item .p-cluster{ font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; margin-top:2px; }
 
     /* Power Level Cases */
     .power-case{
@@ -553,10 +559,11 @@
   // ====== CONNECTION SETTING ======================================
   // Paste the "Web app" URL of the deployment that has access set to
   // "Anyone". It ends with /exec.
-  var API_URL = 'https://script.google.com/macros/s/AKfycbzV8Rod3eDqkVp7FWZZDmPhCKfv0UXSF6fqkiE77gnPBkRH8pgWXsScLyfeGXReiImd/exec';
+  var API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
   // =================================================================
 
   var SYNC_KEY = 'erpsLastSync';
+  var SCHEMA = 2;   // bump when the saved data gets new fields, so phones refresh once
 
   // ---------- helpers ----------
   var ls = {
@@ -760,7 +767,7 @@
     syncing = true;
     setStatus('⟳ Syncing…');
     try {
-      var need = !!opts.force || !DB || !DB.version;
+      var need = !!opts.force || !DB || !DB.version || DB.schema !== SCHEMA;
       if (!need) {
         var v = await callApi('getDataVersion', [], { timeout: 20000 });
         need = String(v) !== String(DB.version);
@@ -1487,7 +1494,29 @@
         });
       }
 
+      if (Array.isArray(data.fourGOnly)){
+        html += '<div class="section-title">4G Only Sites (' + data.fourGOnly.length + ')</div>';
+        if (data.fourGOnly.length === 0){
+          html += '<div class="port-empty">No sites are marked 4G only.</div>';
+        } else {
+          data.fourGOnly.forEach(function(s){
+            html += '<div class="fourg-item" data-cluster="' + esc(s.cluster) + '" data-row="' + s.rowIndex + '">' +
+                    '<div class="p-site">' + esc(s.site) + '</div>' +
+                    '<div class="p-cluster">' + esc(s.cluster) + '</div></div>';
+          });
+        }
+      }
+
       dashBody.innerHTML = html;
+
+      dashBody.querySelectorAll('.fourg-item').forEach(function(el){
+        el.addEventListener('click', function(){
+          closeDashboard();
+          pendingSiteJumpRow = Number(el.getAttribute('data-row'));
+          clusterSelect.value = el.getAttribute('data-cluster');
+          clusterSelect.dispatchEvent(new Event('change'));
+        });
+      });
 
       dashBody.querySelectorAll('.cluster-row, .pending-item').forEach(function(el){
         el.addEventListener('click', function(){
@@ -1534,6 +1563,11 @@
       data.pending.forEach(function(p){
         lines.push([p.site, p.cluster, p.cefStatus, p.mig2gStatus, p.mig3gStatus].map(csvEscape).join(','));
       });
+      if (Array.isArray(data.fourGOnly)){
+        lines.push('');
+        lines.push(['4G Only Site','Cluster'].map(csvEscape).join(','));
+        data.fourGOnly.forEach(function(s){ lines.push([s.site, s.cluster].map(csvEscape).join(',')); });
+      }
 
       const csvContent = lines.join('\r\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1653,6 +1687,28 @@
           doc.text(flagText, marginX + contentW - 3, y + 7, { align:'right', maxWidth: contentW - 60 });
           y += 13;
         });
+      }
+
+      // 4G only sites, listed below the pending work
+      if (Array.isArray(data.fourGOnly)){
+        y += 4;
+        checkPageBreak(12);
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(NAVY[0],NAVY[1],NAVY[2]);
+        doc.text('4G Only Sites (' + data.fourGOnly.length + ')', marginX, y); y += 6;
+        if (data.fourGOnly.length === 0){
+          doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+          doc.text('No sites are marked 4G only', marginX, y); y += 6;
+        } else {
+          data.fourGOnly.forEach(function(s){
+            checkPageBreak(11);
+            doc.setFillColor(245,247,250); doc.rect(marginX, y, contentW, 9, 'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(DARKTEXT[0],DARKTEXT[1],DARKTEXT[2]);
+            doc.text(s.site, marginX + 3, y + 5.8);
+            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(GRAY[0],GRAY[1],GRAY[2]);
+            doc.text(s.cluster, marginX + contentW - 3, y + 5.8, { align:'right' });
+            y += 10;
+          });
+        }
       }
 
       const filenameDate = now.toISOString().slice(0,10);
